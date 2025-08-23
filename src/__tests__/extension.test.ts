@@ -56,8 +56,6 @@ const mockVscode = {
   },
 };
 
-
-
 import * as extension from '../extension';
 import { ExtensionController } from '../controllers/ExtensionController';
 

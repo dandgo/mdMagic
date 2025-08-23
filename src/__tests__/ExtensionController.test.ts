@@ -56,8 +56,6 @@ const mockVscode = {
   },
 };
 
-
-
 // Mock ConfigManager
 const mockConfigManager = {
   id: 'config-manager',
