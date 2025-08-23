@@ -213,9 +213,11 @@ src/
 - Use async/await for asynchronous operations
 - Follow SOLID principles
 - Target minimum 85% code coverage (when testing is implemented)
+- **ALWAYS format code with Prettier before committing** - use `npm run format`
 
 **Required Commands Before Committing**:
 ```bash
+npm run format    # Format code with Prettier (ALWAYS run this first)
 npm run lint      # Must pass
 npm run compile   # Must succeed  
 npm run package   # Must create bundle successfully

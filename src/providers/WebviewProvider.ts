@@ -492,11 +492,13 @@ class WebviewSerializer implements vscode.WebviewPanelSerializer {
       webviewPanel.webview.options = this.webviewProvider['getWebviewOptions']();
 
       // Load webview content based on mode
-      webviewPanel.webview.html = await this.webviewProvider['getWebviewContent'](mode as EditorMode);
+      webviewPanel.webview.html = await this.webviewProvider['getWebviewContent'](
+        mode as EditorMode
+      );
 
       // Set up message handling for the restored webview
-      const messageDisposable = webviewPanel.webview.onDidReceiveMessage((message: WebviewMessage) =>
-        this.webviewProvider.handleWebviewMessage(message, panelId)
+      const messageDisposable = webviewPanel.webview.onDidReceiveMessage(
+        (message: WebviewMessage) => this.webviewProvider.handleWebviewMessage(message, panelId)
       );
 
       // Set up panel event handlers
@@ -519,7 +521,11 @@ class WebviewSerializer implements vscode.WebviewPanelSerializer {
       this.webviewProvider['panels'].set(panelId, panelInfo);
 
       // Register disposables
-      this.webviewProvider['disposables'].push(messageDisposable, disposeDisposable, changeDisposable);
+      this.webviewProvider['disposables'].push(
+        messageDisposable,
+        disposeDisposable,
+        changeDisposable
+      );
 
       // Send restored content to webview once it's ready
       setTimeout(() => {
@@ -529,11 +535,12 @@ class WebviewSerializer implements vscode.WebviewPanelSerializer {
         });
       }, 100);
 
-      console.log(`[WebviewSerializer] Successfully restored ${mode} webview for document ${documentId}`);
-
+      console.log(
+        `[WebviewSerializer] Successfully restored ${mode} webview for document ${documentId}`
+      );
     } catch (error) {
       console.error('[WebviewSerializer] Error restoring webview panel:', error);
-      
+
       // Provide fallback content if restoration fails
       webviewPanel.webview.html = this.webviewProvider['getErrorContent'](
         'Failed to restore webview. Please reopen the document.'
