@@ -1,0 +1,60 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# VS Code Extension
+*.vsix
+out/
+dist/
+.vscode-test/
+
+# Build outputs
+build/
+coverage/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Logs
+logs
+*.log
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Test
+test-results/
+playwright-report/
+test-results.xml
+
+# TypeScript
+*.tsbuildinfo
+
+# Package manager locks (keep one)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
