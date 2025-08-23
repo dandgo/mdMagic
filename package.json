@@ -18,7 +18,18 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [],
+    "commands": [
+      {
+        "command": "mdMagic.openEditor",
+        "title": "Open in Editor Mode",
+        "category": "mdMagic"
+      },
+      {
+        "command": "mdMagic.openViewer",
+        "title": "Open in Viewer Mode",
+        "category": "mdMagic"
+      }
+    ],
     "keybindings": [],
     "configuration": {
       "title": "mdMagic",

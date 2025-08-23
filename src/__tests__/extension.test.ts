@@ -9,6 +9,8 @@ const mockVscode = {
     showInformationMessage: jest.fn(),
     showErrorMessage: jest.fn(),
     showWarningMessage: jest.fn(),
+    createWebviewPanel: jest.fn(),
+    registerWebviewPanelSerializer: jest.fn(() => ({ dispose: jest.fn() })),
   },
   commands: {
     registerCommand: jest.fn(),

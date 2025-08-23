@@ -70,6 +70,11 @@ export class ExtensionController {
     const documentManager = new DocumentManager(this.context);
     await this.registerComponent(documentManager);
     
+    // Register WebviewProvider
+    const { WebviewProvider } = require('../providers/WebviewProvider');
+    const webviewProvider = new WebviewProvider(this.context);
+    await this.registerComponent(webviewProvider);
+    
     this.logInfo('Component registration complete');
   }
 
@@ -98,13 +103,46 @@ export class ExtensionController {
   private registerCommands(): void {
     this.logInfo('Registering commands...');
     
-    // TODO: Register actual commands when they are implemented
-    // Example:
-    // const disposable = vscode.commands.registerCommand('mdMagic.openViewer', () => {
-    //   // Command implementation
-    // });
-    // this.disposables.push(disposable);
-    // this.context.subscriptions.push(disposable);
+    // Command to open markdown in editor mode
+    const openEditorCommand = vscode.commands.registerCommand('mdMagic.openEditor', async (uri?: vscode.Uri) => {
+      try {
+        const targetUri = uri || vscode.window.activeTextEditor?.document?.uri;
+        if (!targetUri) {
+          vscode.window.showErrorMessage('No markdown file selected');
+          return;
+        }
+        
+        const webviewProvider = this.getComponent('webviewProvider') as any;
+        if (webviewProvider) {
+          const document = await vscode.workspace.openTextDocument(targetUri);
+          await webviewProvider.createEditorWebview(targetUri, document.getText());
+        }
+      } catch (error) {
+        this.handleError(error, 'Failed to open editor');
+      }
+    });
+    
+    // Command to open markdown in viewer mode
+    const openViewerCommand = vscode.commands.registerCommand('mdMagic.openViewer', async (uri?: vscode.Uri) => {
+      try {
+        const targetUri = uri || vscode.window.activeTextEditor?.document?.uri;
+        if (!targetUri) {
+          vscode.window.showErrorMessage('No markdown file selected');
+          return;
+        }
+        
+        const webviewProvider = this.getComponent('webviewProvider') as any;
+        if (webviewProvider) {
+          const document = await vscode.workspace.openTextDocument(targetUri);
+          await webviewProvider.createViewerWebview(targetUri, document.getText());
+        }
+      } catch (error) {
+        this.handleError(error, 'Failed to open viewer');
+      }
+    });
+    
+    this.disposables.push(openEditorCommand, openViewerCommand);
+    this.context.subscriptions.push(openEditorCommand, openViewerCommand);
     
     this.logInfo('Command registration complete');
   }

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+    <title>mdMagic Editor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--vscode-font-family);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #toolbar {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            background-color: var(--vscode-editorWidget-background);
+            border-bottom: 1px solid var(--vscode-editorWidget-border);
+        }
+        #toolbar button {
+            margin-right: 8px;
+            padding: 4px 8px;
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+        #toolbar button:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+        #editor-container {
+            flex: 1;
+            position: relative;
+        }
+        #status {
+            padding: 4px 8px;
+            background-color: var(--vscode-statusBar-background);
+            color: var(--vscode-statusBar-foreground);
+            font-size: 12px;
+            border-top: 1px solid var(--vscode-statusBar-border);
+        }
+    </style>
+</head>
+<body>
+    <div id="toolbar">
+        <button id="bold-btn" title="Bold">B</button>
+        <button id="italic-btn" title="Italic">I</button>
+        <button id="header-btn" title="Header">H</button>
+        <button id="link-btn" title="Link">🔗</button>
+        <button id="save-btn" title="Save">💾</button>
+    </div>
+    <div id="editor-container">
+        <textarea id="editor" placeholder="Start typing your markdown..."></textarea>
+    </div>
+    <div id="status">
+        Ready | Mode: Editor
+    </div>
+
+    <script>
+        (function() {
+            const vscode = acquireVsCodeApi();
+            
+            // Get DOM elements
+            const editor = document.getElementById('editor');
+            const status = document.getElementById('status');
+            
+            // State management
+            let documentState = {
+                content: '',
+                isDirty: false,
+                cursorPosition: { line: 0, column: 0 }
+            };
+            
+            // Initialize editor
+            function initializeEditor() {
+                editor.style.width = '100%';
+                editor.style.height = '100%';
+                editor.style.border = 'none';
+                editor.style.outline = 'none';
+                editor.style.resize = 'none';
+                editor.style.fontFamily = 'var(--vscode-editor-font-family)';
+                editor.style.fontSize = 'var(--vscode-editor-font-size)';
+                editor.style.backgroundColor = 'var(--vscode-editor-background)';
+                editor.style.color = 'var(--vscode-editor-foreground)';
+                editor.style.padding = '16px';
+            }
+            
+            // Handle content changes
+            editor.addEventListener('input', function() {
+                documentState.content = editor.value;
+                documentState.isDirty = true;
+                updateStatus();
+                
+                // Send content change to extension
+                vscode.postMessage({
+                    type: 'contentChanged',
+                    payload: {
+                        content: editor.value,
+                        isDirty: true
+                    }
+                });
+            });
+            
+            // Handle toolbar actions
+            document.getElementById('bold-btn').addEventListener('click', () => {
+                insertAtCursor('**', '**');
+            });
+            
+            document.getElementById('italic-btn').addEventListener('click', () => {
+                insertAtCursor('*', '*');
+            });
+            
+            document.getElementById('header-btn').addEventListener('click', () => {
+                insertAtCursor('# ', '');
+            });
+            
+            document.getElementById('link-btn').addEventListener('click', () => {
+                insertAtCursor('[', '](url)');
+            });
+            
+            document.getElementById('save-btn').addEventListener('click', () => {
+                vscode.postMessage({
+                    type: 'saveDocument',
+                    payload: {
+                        content: editor.value
+                    }
+                });
+            });
+            
+            // Helper function to insert text at cursor
+            function insertAtCursor(before, after) {
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                const text = editor.value;
+                const selectedText = text.substring(start, end);
+                
+                editor.value = text.substring(0, start) + before + selectedText + after + text.substring(end);
+                editor.focus();
+                editor.setSelectionRange(start + before.length, start + before.length + selectedText.length);
+                
+                // Trigger input event
+                editor.dispatchEvent(new Event('input'));
+            }
+            
+            // Update status bar
+            function updateStatus() {
+                const lines = editor.value.split('\n').length;
+                const chars = editor.value.length;
+                const dirtyIndicator = documentState.isDirty ? ' •' : '';
+                status.textContent = `Lines: ${lines} | Characters: ${chars} | Mode: Editor${dirtyIndicator}`;
+            }
+            
+            // Handle messages from extension
+            window.addEventListener('message', event => {
+                const message = event.data;
+                
+                switch (message.type) {
+                    case 'setContent':
+                        editor.value = message.payload.content;
+                        documentState.content = message.payload.content;
+                        documentState.isDirty = false;
+                        updateStatus();
+                        break;
+                        
+                    case 'updateConfig':
+                        // Handle configuration updates
+                        break;
+                        
+                    case 'executeCommand':
+                        // Handle command execution
+                        break;
+                }
+            });
+            
+            // Initialize
+            initializeEditor();
+            updateStatus();
+            
+            // Notify extension that webview is ready
+            vscode.postMessage({
+                type: 'webviewReady',
+                payload: {}
+            });
+        })();
+    </script>
+</body>
+</html>
