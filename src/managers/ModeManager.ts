@@ -62,20 +62,24 @@ export class ModeManager implements IModeManager {
       this.logInfo('Initializing Mode Manager...');
 
       // Listen for configuration changes to update default modes
-      this.disposables.push(
-        this.configManager.addChangeListener((event) => {
-          if (event.key === 'defaultMode') {
-            this.handleDefaultModeChange(event.newValue as EditorMode);
-          }
-        })
-      );
+      if (this.configManager && typeof this.configManager.addChangeListener === 'function') {
+        this.disposables.push(
+          this.configManager.addChangeListener((event) => {
+            if (event.key === 'defaultMode') {
+              this.handleDefaultModeChange(event.newValue as EditorMode);
+            }
+          })
+        );
+      }
 
       // Listen for document changes to track mode state
-      this.disposables.push(
-        this.documentManager.addChangeListener((event) => {
-          this.handleDocumentChange(event);
-        })
-      );
+      if (this.documentManager && typeof this.documentManager.addChangeListener === 'function') {
+        this.disposables.push(
+          this.documentManager.addChangeListener((event) => {
+            this.handleDocumentChange(event);
+          })
+        );
+      }
 
       this.isInitialized = true;
       this.logInfo('Mode Manager initialized successfully');
@@ -109,8 +113,13 @@ export class ModeManager implements IModeManager {
     }
 
     // Return default mode from configuration
-    const defaultMode = this.configManager.getConfigurationValue('defaultMode');
-    return defaultMode === 'editor' ? EditorMode.Editor : EditorMode.Viewer;
+    if (this.configManager && typeof this.configManager.getConfigurationValue === 'function') {
+      const defaultMode = this.configManager.getConfigurationValue('defaultMode');
+      return defaultMode === 'editor' ? EditorMode.Editor : EditorMode.Viewer;
+    }
+
+    // Fallback to Viewer mode if configuration is not available
+    return EditorMode.Viewer;
   }
 
   /**
@@ -146,9 +155,11 @@ export class ModeManager implements IModeManager {
       this.documentModes.set(documentId, modeState);
 
       // Update document mode
-      const document = this.documentManager.getDocument(vscode.Uri.parse(documentId));
-      if (document) {
-        document.mode = targetMode;
+      if (this.documentManager && typeof this.documentManager.getDocument === 'function') {
+        const document = this.documentManager.getDocument(vscode.Uri.parse(documentId));
+        if (document) {
+          document.mode = targetMode;
+        }
       }
 
       // Notify listeners
@@ -186,9 +197,11 @@ export class ModeManager implements IModeManager {
    */
   public canSwitchMode(documentId: string, targetMode: EditorMode): boolean {
     // Check if document exists
-    const document = this.documentManager.getDocument(vscode.Uri.parse(documentId));
-    if (!document) {
-      return false;
+    if (this.documentManager && typeof this.documentManager.getDocument === 'function') {
+      const document = this.documentManager.getDocument(vscode.Uri.parse(documentId));
+      if (!document) {
+        return false;
+      }
     }
 
     // All mode switches are allowed for now
@@ -207,8 +220,13 @@ export class ModeManager implements IModeManager {
    * Set document to default mode from configuration
    */
   public async setDefaultMode(documentId: string): Promise<void> {
-    const defaultMode = this.configManager.getConfigurationValue('defaultMode');
-    const targetMode = defaultMode === 'editor' ? EditorMode.Editor : EditorMode.Viewer;
+    let targetMode = EditorMode.Viewer; // fallback default
+    
+    if (this.configManager && typeof this.configManager.getConfigurationValue === 'function') {
+      const defaultMode = this.configManager.getConfigurationValue('defaultMode');
+      targetMode = defaultMode === 'editor' ? EditorMode.Editor : EditorMode.Viewer;
+    }
+    
     await this.switchMode(documentId, targetMode);
   }
 
@@ -220,15 +238,18 @@ export class ModeManager implements IModeManager {
     currentMode: EditorMode
   ): Promise<{ cursorPosition?: { line: number; character: number }; scrollPosition?: number } | null> {
     try {
-      const document = this.documentManager.getDocument(vscode.Uri.parse(documentId));
-      if (!document) {
-        return null;
-      }
+      if (this.documentManager && typeof this.documentManager.getDocument === 'function') {
+        const document = this.documentManager.getDocument(vscode.Uri.parse(documentId));
+        if (!document) {
+          return null;
+        }
 
-      return {
-        cursorPosition: document.cursorPosition,
-        scrollPosition: document.scrollPosition,
-      };
+        return {
+          cursorPosition: document.cursorPosition,
+          scrollPosition: document.scrollPosition,
+        };
+      }
+      return null;
     } catch (error) {
       this.logError(`Failed to save state for document ${documentId}`, error);
       return null;
@@ -248,22 +269,24 @@ export class ModeManager implements IModeManager {
     }
 
     try {
-      const document = this.documentManager.getDocument(vscode.Uri.parse(documentId));
-      if (!document) {
-        return;
-      }
+      if (this.documentManager && typeof this.documentManager.getDocument === 'function') {
+        const document = this.documentManager.getDocument(vscode.Uri.parse(documentId));
+        if (!document) {
+          return;
+        }
 
-      // Restore cursor position
-      if (state.cursorPosition) {
-        document.updateCursorPosition(state.cursorPosition);
-      }
+        // Restore cursor position
+        if (state.cursorPosition && typeof document.updateCursorPosition === 'function') {
+          document.updateCursorPosition(state.cursorPosition);
+        }
 
-      // Restore scroll position
-      if (state.scrollPosition !== undefined) {
-        document.updateScrollPosition(state.scrollPosition);
-      }
+        // Restore scroll position
+        if (state.scrollPosition !== undefined && typeof document.updateScrollPosition === 'function') {
+          document.updateScrollPosition(state.scrollPosition);
+        }
 
-      this.logInfo(`Restored state for document ${documentId} in ${targetMode} mode`);
+        this.logInfo(`Restored state for document ${documentId} in ${targetMode} mode`);
+      }
     } catch (error) {
       this.logError(`Failed to restore state for document ${documentId}`, error);
     }
@@ -275,20 +298,22 @@ export class ModeManager implements IModeManager {
   private async applyModeConfiguration(documentId: string, mode: EditorMode): Promise<void> {
     try {
       // Get mode-specific settings from configuration
-      const config = this.configManager.getConfiguration();
-
-      // Apply mode-specific configurations
-      // This could include toolbar visibility, theme settings, etc.
-      switch (mode) {
-        case EditorMode.Editor:
-          // Editor-specific configurations
-          break;
-        case EditorMode.Viewer:
-          // Viewer-specific configurations
-          break;
-        case EditorMode.Split:
-          // Split-view-specific configurations
-          break;
+      if (this.configManager && typeof this.configManager.getConfiguration === 'function') {
+        const config = this.configManager.getConfiguration();
+        
+        // Apply mode-specific configurations
+        // This could include toolbar visibility, theme settings, etc.
+        switch (mode) {
+          case EditorMode.Editor:
+            // Editor-specific configurations
+            break;
+          case EditorMode.Viewer:
+            // Viewer-specific configurations
+            break;
+          case EditorMode.Split:
+            // Split-view-specific configurations
+            break;
+        }
       }
 
       this.logInfo(`Applied ${mode} mode configuration for document ${documentId}`);
