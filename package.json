@@ -28,9 +28,112 @@
         "command": "mdMagic.openViewer",
         "title": "Open in Viewer Mode",
         "category": "mdMagic"
+      },
+      {
+        "command": "mdMagic.toggleMode",
+        "title": "Toggle Mode",
+        "category": "mdMagic"
+      },
+      {
+        "command": "mdMagic.switchToEditor",
+        "title": "Switch to Editor Mode",
+        "category": "mdMagic"
+      },
+      {
+        "command": "mdMagic.switchToViewer",
+        "title": "Switch to Viewer Mode",
+        "category": "mdMagic"
+      },
+      {
+        "command": "mdMagic.formatBold",
+        "title": "Format Bold",
+        "category": "mdMagic"
+      },
+      {
+        "command": "mdMagic.formatItalic",
+        "title": "Format Italic",
+        "category": "mdMagic"
+      },
+      {
+        "command": "mdMagic.insertLink",
+        "title": "Insert Link",
+        "category": "mdMagic"
       }
     ],
-    "keybindings": [],
+    "keybindings": [
+      {
+        "command": "mdMagic.toggleMode",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m",
+        "when": "resourceExtname == .md"
+      },
+      {
+        "command": "mdMagic.switchToEditor",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e",
+        "when": "resourceExtname == .md"
+      },
+      {
+        "command": "mdMagic.switchToViewer",
+        "key": "ctrl+shift+v",
+        "mac": "cmd+shift+v",
+        "when": "resourceExtname == .md"
+      },
+      {
+        "command": "mdMagic.formatBold",
+        "key": "ctrl+b",
+        "mac": "cmd+b",
+        "when": "resourceExtname == .md && editorTextFocus"
+      },
+      {
+        "command": "mdMagic.formatItalic",
+        "key": "ctrl+i",
+        "mac": "cmd+i",
+        "when": "resourceExtname == .md && editorTextFocus"
+      },
+      {
+        "command": "mdMagic.insertLink",
+        "key": "ctrl+k",
+        "mac": "cmd+k",
+        "when": "resourceExtname == .md && editorTextFocus"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "mdMagic.switchToEditor",
+          "when": "resourceExtname == .md",
+          "group": "mdMagic@1"
+        },
+        {
+          "command": "mdMagic.switchToViewer",
+          "when": "resourceExtname == .md",
+          "group": "mdMagic@2"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "mdMagic.toggleMode",
+          "when": "resourceExtname == .md",
+          "group": "mdMagic@1"
+        },
+        {
+          "command": "mdMagic.formatBold",
+          "when": "resourceExtname == .md && editorHasSelection",
+          "group": "mdMagic@2"
+        },
+        {
+          "command": "mdMagic.formatItalic",
+          "when": "resourceExtname == .md && editorHasSelection",
+          "group": "mdMagic@3"
+        },
+        {
+          "command": "mdMagic.insertLink",
+          "when": "resourceExtname == .md",
+          "group": "mdMagic@4"
+        }
+      ]
+    },
     "configuration": {
       "title": "mdMagic",
       "properties": {
