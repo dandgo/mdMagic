@@ -1,0 +1,340 @@
+/* mdMagic Editor Styles */
+
+:root {
+  --toolbar-height: 40px;
+  --status-height: 24px;
+  --button-padding: 8px 12px;
+  --button-margin: 4px;
+  --border-radius: 3px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--vscode-font-family);
+  color: var(--vscode-foreground);
+  background-color: var(--vscode-editor-background);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Toolbar Styles */
+#toolbar {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  height: var(--toolbar-height);
+  background-color: var(--vscode-editorWidget-background);
+  border-bottom: 1px solid var(--vscode-editorWidget-border);
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+#toolbar .toolbar-group {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+  padding-right: 8px;
+  border-right: 1px solid var(--vscode-editorWidget-border);
+}
+
+#toolbar .toolbar-group:last-child {
+  border-right: none;
+  margin-right: 0;
+}
+
+#toolbar button {
+  padding: var(--button-padding);
+  margin: 0 2px;
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: 1px solid var(--vscode-button-border);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 12px;
+  min-width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+#toolbar button:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+#toolbar button:active,
+#toolbar button.active {
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+#toolbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#toolbar select {
+  padding: 4px 8px;
+  background-color: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  border: 1px solid var(--vscode-dropdown-border);
+  border-radius: var(--border-radius);
+  margin: 0 4px;
+  font-size: 12px;
+}
+
+/* Editor Container */
+#editor-container {
+  flex: 1;
+  position: relative;
+  display: flex;
+  overflow: hidden;
+}
+
+#monaco-editor {
+  width: 100%;
+  height: 100%;
+}
+
+/* Preview Panel (for WYSIWYG mode) */
+#preview-panel {
+  width: 50%;
+  height: 100%;
+  border-left: 1px solid var(--vscode-editorWidget-border);
+  background-color: var(--vscode-editor-background);
+  overflow-y: auto;
+  padding: 16px;
+  display: none;
+}
+
+#preview-panel.visible {
+  display: block;
+}
+
+#preview-content {
+  color: var(--vscode-foreground);
+  line-height: 1.6;
+}
+
+/* Preview content styling */
+#preview-content h1,
+#preview-content h2,
+#preview-content h3,
+#preview-content h4,
+#preview-content h5,
+#preview-content h6 {
+  margin: 0.5em 0;
+  color: var(--vscode-foreground);
+}
+
+#preview-content p {
+  margin: 0.5em 0;
+}
+
+#preview-content ul,
+#preview-content ol {
+  padding-left: 1.5em;
+}
+
+#preview-content blockquote {
+  border-left: 4px solid var(--vscode-textBlockQuote-border);
+  background-color: var(--vscode-textBlockQuote-background);
+  padding: 8px 16px;
+  margin: 8px 0;
+}
+
+#preview-content code {
+  background-color: var(--vscode-textCodeBlock-background);
+  color: var(--vscode-foreground);
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-family: var(--vscode-editor-font-family);
+}
+
+#preview-content pre {
+  background-color: var(--vscode-textCodeBlock-background);
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+#preview-content pre code {
+  background: none;
+  padding: 0;
+}
+
+#preview-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+}
+
+#preview-content th,
+#preview-content td {
+  border: 1px solid var(--vscode-editorWidget-border);
+  padding: 8px;
+  text-align: left;
+}
+
+#preview-content th {
+  background-color: var(--vscode-editorWidget-background);
+  font-weight: bold;
+}
+
+/* Status Bar */
+#status {
+  padding: 4px 8px;
+  height: var(--status-height);
+  background-color: var(--vscode-statusBar-background);
+  color: var(--vscode-statusBar-foreground);
+  font-size: 12px;
+  border-top: 1px solid var(--vscode-statusBar-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#status .status-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#status .status-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Dialog Styles */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background-color: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-editorWidget-border);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  min-width: 300px;
+  max-width: 500px;
+}
+
+.dialog h3 {
+  margin: 0 0 12px 0;
+  color: var(--vscode-foreground);
+}
+
+.dialog label {
+  display: block;
+  margin: 8px 0 4px 0;
+  color: var(--vscode-foreground);
+  font-size: 12px;
+}
+
+.dialog input,
+.dialog textarea {
+  width: 100%;
+  padding: 6px 8px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: var(--border-radius);
+  font-family: var(--vscode-font-family);
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.dialog input:focus,
+.dialog textarea:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  border-color: var(--vscode-focusBorder);
+}
+
+.dialog .dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.dialog .dialog-buttons button {
+  padding: 6px 12px;
+  border: 1px solid var(--vscode-button-border);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.dialog .dialog-buttons .primary {
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.dialog .dialog-buttons .secondary {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #toolbar {
+    height: auto;
+    min-height: var(--toolbar-height);
+  }
+  
+  #toolbar .toolbar-group {
+    margin-right: 4px;
+    padding-right: 4px;
+  }
+  
+  #preview-panel {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--vscode-editorWidget-border);
+  }
+  
+  #editor-container {
+    flex-direction: column;
+  }
+  
+  #monaco-editor {
+    height: 50%;
+  }
+  
+  #preview-panel.visible {
+    height: 50%;
+  }
+}
+
+/* Animation utilities */
+.fade-in {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.slide-down {
+  animation: slideDown 0.2s ease-in-out;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

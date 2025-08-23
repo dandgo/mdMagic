@@ -240,7 +240,7 @@ export class WebviewProvider implements Component {
     };
 
     // Set webview HTML content
-    panel.webview.html = await this.getWebviewContent(mode);
+    panel.webview.html = await this.getWebviewContent(mode, panel.webview);
 
     // Set up state serialization
     const getState = () => ({
@@ -314,7 +314,7 @@ export class WebviewProvider implements Component {
   /**
    * Get webview HTML content based on mode
    */
-  private async getWebviewContent(mode: EditorMode): Promise<string> {
+  private async getWebviewContent(mode: EditorMode, webview: vscode.Webview): Promise<string> {
     const templatePath = path.join(
       this.extensionPath,
       'src',
@@ -324,12 +324,34 @@ export class WebviewProvider implements Component {
     );
 
     try {
-      const htmlContent = await fs.promises.readFile(templatePath, 'utf8');
+      let htmlContent = await fs.promises.readFile(templatePath, 'utf8');
+      
+      // Replace asset references with webview URIs
+      htmlContent = this.processAssetUrls(htmlContent, webview);
+      
       return htmlContent;
     } catch (error) {
       console.error(`[WebviewProvider] Failed to load template for ${mode}:`, error);
       return this.getErrorContent(`Failed to load ${mode} template`);
     }
+  }
+
+  /**
+   * Process asset URLs to use webview URIs
+   */
+  private processAssetUrls(html: string, webview: vscode.Webview): string {
+    // Create URIs for assets
+    const webviewPath = vscode.Uri.file(path.join(this.extensionPath, 'src', 'webview'));
+    const stylesUri = webview.asWebviewUri(vscode.Uri.file(path.join(webviewPath.fsPath, 'styles', 'editor.css')));
+    const monacoLoaderUri = webview.asWebviewUri(vscode.Uri.file(path.join(webviewPath.fsPath, 'scripts', 'monaco-loader.js')));
+    const editorJsUri = webview.asWebviewUri(vscode.Uri.file(path.join(webviewPath.fsPath, 'scripts', 'editor.js')));
+    
+    // Replace relative paths with webview URIs
+    html = html.replace('href="styles/editor.css"', `href="${stylesUri}"`);
+    html = html.replace('src="scripts/monaco-loader.js"', `src="${monacoLoaderUri}"`);
+    html = html.replace('src="scripts/editor.js"', `src="${editorJsUri}"`);
+    
+    return html;
   }
 
   /**
@@ -493,7 +515,8 @@ class WebviewSerializer implements vscode.WebviewPanelSerializer {
 
       // Load webview content based on mode
       webviewPanel.webview.html = await this.webviewProvider['getWebviewContent'](
-        mode as EditorMode
+        mode as EditorMode,
+        webviewPanel.webview
       );
 
       // Set up message handling for the restored webview
