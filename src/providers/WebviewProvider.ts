@@ -351,11 +351,15 @@ export class WebviewProvider implements Component {
     const editorJsUri = webview.asWebviewUri(
       vscode.Uri.file(path.join(webviewPath.fsPath, 'scripts', 'editor.js'))
     );
+    const viewerJsUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(webviewPath.fsPath, 'scripts', 'viewer.js'))
+    );
 
     // Replace relative paths with webview URIs
     html = html.replace('href="styles/editor.css"', `href="${stylesUri}"`);
     html = html.replace('src="scripts/monaco-loader.js"', `src="${monacoLoaderUri}"`);
     html = html.replace('src="scripts/editor.js"', `src="${editorJsUri}"`);
+    html = html.replace('src="scripts/viewer.js"', `src="${viewerJsUri}"`);
 
     return html;
   }
