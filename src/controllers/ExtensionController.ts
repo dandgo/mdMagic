@@ -70,6 +70,11 @@ export class ExtensionController {
     const documentManager = new DocumentManager(this.context);
     await this.registerComponent(documentManager);
 
+    // Register ModeManager (depends on ConfigManager and DocumentManager)
+    const { ModeManager } = require('../managers/ModeManager');
+    const modeManager = new ModeManager(this.context, documentManager, configManager);
+    await this.registerComponent(modeManager);
+
     // Register WebviewProvider
     const { WebviewProvider } = require('../providers/WebviewProvider');
     const webviewProvider = new WebviewProvider(this.context);
