@@ -325,10 +325,10 @@ export class WebviewProvider implements Component {
 
     try {
       let htmlContent = await fs.promises.readFile(templatePath, 'utf8');
-      
+
       // Replace asset references with webview URIs
       htmlContent = this.processAssetUrls(htmlContent, webview);
-      
+
       return htmlContent;
     } catch (error) {
       console.error(`[WebviewProvider] Failed to load template for ${mode}:`, error);
@@ -342,15 +342,21 @@ export class WebviewProvider implements Component {
   private processAssetUrls(html: string, webview: vscode.Webview): string {
     // Create URIs for assets
     const webviewPath = vscode.Uri.file(path.join(this.extensionPath, 'src', 'webview'));
-    const stylesUri = webview.asWebviewUri(vscode.Uri.file(path.join(webviewPath.fsPath, 'styles', 'editor.css')));
-    const monacoLoaderUri = webview.asWebviewUri(vscode.Uri.file(path.join(webviewPath.fsPath, 'scripts', 'monaco-loader.js')));
-    const editorJsUri = webview.asWebviewUri(vscode.Uri.file(path.join(webviewPath.fsPath, 'scripts', 'editor.js')));
-    
+    const stylesUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(webviewPath.fsPath, 'styles', 'editor.css'))
+    );
+    const monacoLoaderUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(webviewPath.fsPath, 'scripts', 'monaco-loader.js'))
+    );
+    const editorJsUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(webviewPath.fsPath, 'scripts', 'editor.js'))
+    );
+
     // Replace relative paths with webview URIs
     html = html.replace('href="styles/editor.css"', `href="${stylesUri}"`);
     html = html.replace('src="scripts/monaco-loader.js"', `src="${monacoLoaderUri}"`);
     html = html.replace('src="scripts/editor.js"', `src="${editorJsUri}"`);
-    
+
     return html;
   }
 

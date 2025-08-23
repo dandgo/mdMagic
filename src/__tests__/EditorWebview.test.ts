@@ -31,7 +31,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
       html: '',
       options: {},
       asWebviewUri: jest.fn((uri) => ({
-        toString: () => `vscode-webview://fake-uuid/${uri.fsPath.replace(/.*\//, '')}`
+        toString: () => `vscode-webview://fake-uuid/${uri.fsPath.replace(/.*\//, '')}`,
       })),
       postMessage: jest.fn(),
       onDidReceiveMessage: jest.fn(() => ({ dispose: jest.fn() })),
@@ -66,7 +66,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
   describe('Editor Webview Creation', () => {
     it('should create editor webview successfully', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       // Mock file reading for template
       (fs.promises.readFile as jest.Mock).mockResolvedValue(`
         <!DOCTYPE html>
@@ -102,7 +102,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
 
     it('should process asset URLs correctly', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       const templateContent = `
         <!DOCTYPE html>
         <html>
@@ -129,7 +129,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
 
     it('should handle template loading errors gracefully', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       (fs.promises.readFile as jest.Mock).mockRejectedValue(new Error('File not found'));
 
       await webviewProvider.initialize();
@@ -144,7 +144,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
   describe('Monaco Editor Integration', () => {
     it('should include Monaco Editor loader in HTML', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       const templateContent = `
         <script src="scripts/monaco-loader.js"></script>
         <script src="scripts/editor.js"></script>
@@ -161,7 +161,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
 
     it('should include monaco editor container', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       const templateContent = `
         <div id="editor-container">
           <div id="monaco-editor"></div>
@@ -181,7 +181,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
   describe('Toolbar Implementation', () => {
     it('should include enhanced toolbar in HTML', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       const templateContent = `
         <div id="toolbar">
           <button data-command="bold">B</button>
@@ -204,7 +204,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
   describe('Message Handling', () => {
     it('should handle content change messages', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       (fs.promises.readFile as jest.Mock).mockResolvedValue('<html></html>');
 
       await webviewProvider.initialize();
@@ -216,8 +216,8 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
         type: 'contentChanged',
         payload: {
           content: '# Updated content',
-          isDirty: true
-        }
+          isDirty: true,
+        },
       };
 
       webviewProvider.handleWebviewMessage(message, panelId);
@@ -230,7 +230,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
 
     it('should handle save document messages', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       (fs.promises.readFile as jest.Mock).mockResolvedValue('<html></html>');
 
       await webviewProvider.initialize();
@@ -240,8 +240,8 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
       const message = {
         type: 'saveDocument',
         payload: {
-          content: '# Content to save'
-        }
+          content: '# Content to save',
+        },
       };
 
       webviewProvider.handleWebviewMessage(message, panelId);
@@ -254,7 +254,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
     it('should handle webview ready messages', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
       const initialContent = '# Initial content';
-      
+
       (fs.promises.readFile as jest.Mock).mockResolvedValue('<html></html>');
 
       await webviewProvider.initialize();
@@ -263,7 +263,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
       const panelId = Array.from(webviewProvider['panels'].keys())[0];
       const message = {
         type: 'webviewReady',
-        payload: {}
+        payload: {},
       };
 
       webviewProvider.handleWebviewMessage(message, panelId);
@@ -271,7 +271,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
       // Verify that content was sent to webview
       expect(mockWebview.postMessage).toHaveBeenCalledWith({
         type: 'setContent',
-        payload: { content: initialContent }
+        payload: { content: initialContent },
       });
     });
   });
@@ -279,7 +279,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
   describe('WYSIWYG Features', () => {
     it('should include preview panel container', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       const templateContent = `
         <div id="editor-container">
           <div id="monaco-editor"></div>
@@ -297,7 +297,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
 
     it('should include CSS for preview styling', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       const templateContent = `
         <link rel="stylesheet" href="styles/editor.css">
       `;
@@ -314,7 +314,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
   describe('Auto-save Functionality', () => {
     it('should set up proper message handlers for auto-save', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       (fs.promises.readFile as jest.Mock).mockResolvedValue('<html></html>');
 
       await webviewProvider.initialize();
@@ -326,7 +326,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
 
     it('should handle auto-save content changes', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       (fs.promises.readFile as jest.Mock).mockResolvedValue('<html></html>');
 
       await webviewProvider.initialize();
@@ -338,8 +338,8 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
         payload: {
           content: '# Auto-saved content',
           isDirty: true,
-          autoSave: true
-        }
+          autoSave: true,
+        },
       };
 
       webviewProvider.handleWebviewMessage(message, panelId);
@@ -353,7 +353,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
   describe('Keyboard Shortcuts', () => {
     it('should include editor script that handles keyboard shortcuts', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       const templateContent = `
         <script src="scripts/editor.js"></script>
       `;
@@ -370,7 +370,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
   describe('State Preservation', () => {
     it('should preserve cursor position in webview state', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       (fs.promises.readFile as jest.Mock).mockResolvedValue('<html></html>');
 
       await webviewProvider.initialize();
@@ -386,7 +386,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
 
     it('should update state timestamp on content changes', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       (fs.promises.readFile as jest.Mock).mockResolvedValue('<html></html>');
 
       await webviewProvider.initialize();
@@ -396,14 +396,14 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
       const originalTimestamp = webviewProvider['panels'].get(panelId)?.state.lastModified;
 
       // Wait a bit and then change content
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const message = {
         type: 'contentChanged',
         payload: {
           content: '# Changed content',
-          isDirty: true
-        }
+          isDirty: true,
+        },
       };
 
       webviewProvider.handleWebviewMessage(message, panelId);
@@ -416,7 +416,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
   describe('Error Handling', () => {
     it('should show error content when template fails to load', async () => {
       const documentUri = vscode.Uri.file('/test/document.md');
-      
+
       (fs.promises.readFile as jest.Mock).mockRejectedValue(new Error('Template not found'));
 
       await webviewProvider.initialize();
@@ -429,7 +429,7 @@ describe('Editor Webview Implementation (Task 2.2)', () => {
     it('should handle missing webview panels gracefully', () => {
       const message = {
         type: 'contentChanged',
-        payload: { content: 'test' }
+        payload: { content: 'test' },
       };
 
       // Try to handle message for non-existent panel
