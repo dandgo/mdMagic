@@ -342,24 +342,35 @@ export class WebviewProvider implements Component {
   private processAssetUrls(html: string, webview: vscode.Webview): string {
     // Create URIs for assets
     const webviewPath = vscode.Uri.file(path.join(this.extensionPath, 'src', 'webview'));
-    const stylesUri = webview.asWebviewUri(
-      vscode.Uri.file(path.join(webviewPath.fsPath, 'styles', 'editor.css'))
-    );
-    const monacoLoaderUri = webview.asWebviewUri(
-      vscode.Uri.file(path.join(webviewPath.fsPath, 'scripts', 'monaco-loader.js'))
-    );
-    const editorJsUri = webview.asWebviewUri(
-      vscode.Uri.file(path.join(webviewPath.fsPath, 'scripts', 'editor.js'))
-    );
-    const viewerJsUri = webview.asWebviewUri(
-      vscode.Uri.file(path.join(webviewPath.fsPath, 'scripts', 'viewer.js'))
-    );
-
-    // Replace relative paths with webview URIs
-    html = html.replace('href="styles/editor.css"', `href="${stylesUri}"`);
-    html = html.replace('src="scripts/monaco-loader.js"', `src="${monacoLoaderUri}"`);
-    html = html.replace('src="scripts/editor.js"', `src="${editorJsUri}"`);
-    html = html.replace('src="scripts/viewer.js"', `src="${viewerJsUri}"`);
+    
+    // Only process assets that actually exist in the HTML
+    if (html.includes('href="styles/editor.css"')) {
+      const stylesUri = webview.asWebviewUri(
+        vscode.Uri.file(path.join(webviewPath.fsPath, 'styles', 'editor.css'))
+      );
+      html = html.replace('href="styles/editor.css"', `href="${stylesUri}"`);
+    }
+    
+    if (html.includes('src="scripts/monaco-loader.js"')) {
+      const monacoLoaderUri = webview.asWebviewUri(
+        vscode.Uri.file(path.join(webviewPath.fsPath, 'scripts', 'monaco-loader.js'))
+      );
+      html = html.replace('src="scripts/monaco-loader.js"', `src="${monacoLoaderUri}"`);
+    }
+    
+    if (html.includes('src="scripts/editor.js"')) {
+      const editorJsUri = webview.asWebviewUri(
+        vscode.Uri.file(path.join(webviewPath.fsPath, 'scripts', 'editor.js'))
+      );
+      html = html.replace('src="scripts/editor.js"', `src="${editorJsUri}"`);
+    }
+    
+    if (html.includes('src="scripts/viewer.js"')) {
+      const viewerJsUri = webview.asWebviewUri(
+        vscode.Uri.file(path.join(webviewPath.fsPath, 'scripts', 'viewer.js'))
+      );
+      html = html.replace('src="scripts/viewer.js"', `src="${viewerJsUri}"`);
+    }
 
     return html;
   }
