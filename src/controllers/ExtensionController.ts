@@ -60,6 +60,11 @@ export class ExtensionController {
   private async registerComponents(): Promise<void> {
     this.logInfo('Registering components...');
     
+    // Register ConfigManager first (other components may depend on configuration)
+    const { ConfigManager } = require('../managers/ConfigManager');
+    const configManager = new ConfigManager(this.context);
+    await this.registerComponent(configManager);
+    
     // Register DocumentManager
     const { DocumentManager } = require('../managers/DocumentManager');
     const documentManager = new DocumentManager(this.context);

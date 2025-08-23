@@ -26,6 +26,10 @@ const mockVscode = {
     onDidCloseTextDocument: jest.fn(() => ({
       dispose: jest.fn(),
     })),
+    getConfiguration: jest.fn(() => ({
+      get: jest.fn(),
+      update: jest.fn()
+    })),
     fs: {
       readFile: jest.fn(),
       writeFile: jest.fn(),
@@ -59,6 +63,10 @@ describe('mdMagic Extension', () => {
   beforeEach(() => {
     mockContext = {
       subscriptions: [],
+      globalState: {
+        get: jest.fn(),
+        update: jest.fn().mockResolvedValue(undefined)
+      }
     };
     jest.clearAllMocks();
     

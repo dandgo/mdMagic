@@ -20,7 +20,65 @@
   "contributes": {
     "commands": [],
     "keybindings": [],
-    "configuration": []
+    "configuration": {
+      "title": "mdMagic",
+      "properties": {
+        "mdMagic.defaultMode": {
+          "type": "string",
+          "enum": ["editor", "viewer"],
+          "default": "viewer",
+          "description": "Default mode when opening markdown files"
+        },
+        "mdMagic.autoSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically save changes to markdown files"
+        },
+        "mdMagic.previewTheme": {
+          "type": "string",
+          "default": "default",
+          "description": "Theme for markdown preview"
+        },
+        "mdMagic.enableMath": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable math rendering in markdown preview"
+        },
+        "mdMagic.showToolbar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the toolbar in editor mode"
+        },
+        "mdMagic.keyboardShortcuts": {
+          "type": "object",
+          "default": {
+            "toggleMode": "Ctrl+Shift+M",
+            "save": "Ctrl+S",
+            "export": "Ctrl+Shift+E",
+            "togglePreview": "Ctrl+Shift+V"
+          },
+          "properties": {
+            "toggleMode": {
+              "type": "string",
+              "description": "Keyboard shortcut to toggle between editor and viewer modes"
+            },
+            "save": {
+              "type": "string",
+              "description": "Keyboard shortcut to save the current document"
+            },
+            "export": {
+              "type": "string",
+              "description": "Keyboard shortcut to export the document"
+            },
+            "togglePreview": {
+              "type": "string",
+              "description": "Keyboard shortcut to toggle preview"
+            }
+          },
+          "description": "Keyboard shortcuts for mdMagic commands"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
