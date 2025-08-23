@@ -5,8 +5,8 @@
 // Mock fs first
 jest.mock('fs', () => ({
   promises: {
-    readFile: jest.fn(() => Promise.resolve('<html>Test Template</html>'))
-  }
+    readFile: jest.fn(() => Promise.resolve('<html>Test Template</html>')),
+  },
 }));
 
 // Mock vscode module
@@ -15,7 +15,7 @@ jest.mock('vscode', () => {
     webview: {
       html: '',
       onDidReceiveMessage: jest.fn(() => ({ dispose: jest.fn() })),
-      postMessage: jest.fn()
+      postMessage: jest.fn(),
     },
     onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
     onDidChangeViewState: jest.fn(() => ({ dispose: jest.fn() })),
@@ -23,27 +23,27 @@ jest.mock('vscode', () => {
     active: true,
     visible: true,
     reveal: jest.fn(),
-    dispose: jest.fn()
+    dispose: jest.fn(),
   };
 
   return {
     window: {
       createWebviewPanel: jest.fn(() => mockWebviewPanel),
       registerWebviewPanelSerializer: jest.fn(() => ({ dispose: jest.fn() })),
-      showErrorMessage: jest.fn()
+      showErrorMessage: jest.fn(),
     },
     ViewColumn: {
-      One: 1
+      One: 1,
     },
     Uri: {
-      file: jest.fn((path: string) => ({ fsPath: path, toString: () => `file://${path}` }))
+      file: jest.fn((path: string) => ({ fsPath: path, toString: () => `file://${path}` })),
     },
     commands: {
-      executeCommand: jest.fn()
+      executeCommand: jest.fn(),
     },
     env: {
-      openExternal: jest.fn()
-    }
+      openExternal: jest.fn(),
+    },
   };
 });
 
@@ -54,12 +54,12 @@ import * as vscode from 'vscode';
 // Test data
 const mockContext = {
   extensionPath: '/test/path',
-  subscriptions: []
+  subscriptions: [],
 } as any;
 
 const mockUri = {
   fsPath: '/test/document.md',
-  toString: () => 'file:///test/document.md'
+  toString: () => 'file:///test/document.md',
 } as vscode.Uri;
 
 describe('WebviewProvider', () => {
@@ -92,7 +92,7 @@ describe('WebviewProvider', () => {
 
     it('should create editor webview', async () => {
       const panel = await webviewProvider.createEditorWebview(mockUri, 'test content');
-      
+
       expect(panel).toBeDefined();
       expect(vscode.window.createWebviewPanel).toHaveBeenCalledWith(
         'mdMagic.editor',
@@ -100,14 +100,14 @@ describe('WebviewProvider', () => {
         vscode.ViewColumn.One,
         expect.objectContaining({
           enableScripts: true,
-          retainContextWhenHidden: true
+          retainContextWhenHidden: true,
         })
       );
     });
 
     it('should create viewer webview', async () => {
       const panel = await webviewProvider.createViewerWebview(mockUri, 'test content');
-      
+
       expect(panel).toBeDefined();
       expect(vscode.window.createWebviewPanel).toHaveBeenCalledWith(
         'mdMagic.viewer',
@@ -115,7 +115,7 @@ describe('WebviewProvider', () => {
         vscode.ViewColumn.One,
         expect.objectContaining({
           enableScripts: true,
-          retainContextWhenHidden: true
+          retainContextWhenHidden: true,
         })
       );
     });
@@ -123,7 +123,7 @@ describe('WebviewProvider', () => {
     it('should reuse existing webview for same document', async () => {
       const panel1 = await webviewProvider.createEditorWebview(mockUri);
       const panel2 = await webviewProvider.createEditorWebview(mockUri);
-      
+
       expect(panel1).toBe(panel2);
       // expect(panel1.reveal).toHaveBeenCalled(); // Skip this check as panel structure may vary
     });
@@ -131,7 +131,7 @@ describe('WebviewProvider', () => {
     it('should track active panels', async () => {
       await webviewProvider.createEditorWebview(mockUri);
       const panels = webviewProvider.getActivePanels();
-      
+
       expect(panels).toHaveLength(1);
       expect(panels[0].mode).toBe(EditorMode.EDITOR);
       expect(panels[0].documentId).toContain('doc_');
@@ -149,9 +149,9 @@ describe('WebviewProvider', () => {
     it('should update webview content', () => {
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
-      
+
       webviewProvider.updateWebviewContent(panelId, 'updated content');
-      
+
       // Note: The actual mock might be called through the panel's webview
       // Check that the content was updated in state
       const updatedPanels = webviewProvider.getActivePanels();
@@ -161,9 +161,9 @@ describe('WebviewProvider', () => {
     it('should handle webview disposal', () => {
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
-      
+
       webviewProvider.disposeWebview(panelId);
-      
+
       // Panel dispose is handled internally
       expect(webviewProvider.getActivePanels()).toHaveLength(0);
     });
@@ -171,9 +171,9 @@ describe('WebviewProvider', () => {
     it('should get webview by document ID', () => {
       const panels = webviewProvider.getActivePanels();
       const documentId = panels[0].documentId;
-      
+
       const foundPanel = webviewProvider.getWebviewByDocumentId(documentId);
-      
+
       expect(foundPanel).toBeDefined();
       expect(foundPanel?.documentId).toBe(documentId);
     });
@@ -190,12 +190,15 @@ describe('WebviewProvider', () => {
     it('should handle webview ready message', () => {
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
-      
-      webviewProvider.handleWebviewMessage({
-        type: MessageType.WEBVIEW_READY,
-        payload: {}
-      }, panelId);
-      
+
+      webviewProvider.handleWebviewMessage(
+        {
+          type: MessageType.WEBVIEW_READY,
+          payload: {},
+        },
+        panelId
+      );
+
       // Should send initial content (timing dependent)
       // expect(mockWebviewPanel.webview.postMessage).toHaveBeenCalledWith({
       //   type: 'setContent',
@@ -206,12 +209,15 @@ describe('WebviewProvider', () => {
     it('should handle content changed message', () => {
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
-      
-      webviewProvider.handleWebviewMessage({
-        type: MessageType.CONTENT_CHANGED,
-        payload: { content: 'new content', isDirty: true }
-      }, panelId);
-      
+
+      webviewProvider.handleWebviewMessage(
+        {
+          type: MessageType.CONTENT_CHANGED,
+          payload: { content: 'new content', isDirty: true },
+        },
+        panelId
+      );
+
       const panelInfo = webviewProvider.getActivePanels()[0];
       expect(panelInfo.state.content).toBe('new content');
       expect(panelInfo.state.isDirty).toBe(true);
@@ -220,12 +226,15 @@ describe('WebviewProvider', () => {
     it('should handle save document message', () => {
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
-      
-      webviewProvider.handleWebviewMessage({
-        type: MessageType.SAVE_DOCUMENT,
-        payload: { content: 'content to save' }
-      }, panelId);
-      
+
+      webviewProvider.handleWebviewMessage(
+        {
+          type: MessageType.SAVE_DOCUMENT,
+          payload: { content: 'content to save' },
+        },
+        panelId
+      );
+
       const panelInfo = webviewProvider.getActivePanels()[0];
       expect(panelInfo.state.isDirty).toBe(false);
     });
@@ -233,12 +242,15 @@ describe('WebviewProvider', () => {
     it('should handle execute command message', () => {
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
-      
-      webviewProvider.handleWebviewMessage({
-        type: MessageType.EXECUTE_COMMAND,
-        payload: { command: 'test.command', args: ['arg1'] }
-      }, panelId);
-      
+
+      webviewProvider.handleWebviewMessage(
+        {
+          type: MessageType.EXECUTE_COMMAND,
+          payload: { command: 'test.command', args: ['arg1'] },
+        },
+        panelId
+      );
+
       expect(vscode.commands.executeCommand).toHaveBeenCalledWith('test.command', 'arg1');
     });
   });
@@ -254,9 +266,9 @@ describe('WebviewProvider', () => {
     it('should get webview state', () => {
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
-      
+
       const state = webviewProvider.getWebviewState(panelId);
-      
+
       expect(state).toBeDefined();
       expect(state?.content).toBe('test content');
       expect(state?.mode).toBe(EditorMode.EDITOR);
@@ -265,17 +277,17 @@ describe('WebviewProvider', () => {
     it('should restore webview state', () => {
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
-      
+
       const newState = {
         documentId: 'test',
         mode: EditorMode.EDITOR,
         content: 'restored content',
         isDirty: false,
-        lastModified: new Date()
+        lastModified: new Date(),
       };
-      
+
       webviewProvider.restoreWebviewState(panelId, newState);
-      
+
       // Verify state was updated
       const updatedPanels = webviewProvider.getActivePanels();
       expect(updatedPanels[0].state.content).toBe('restored content');
@@ -286,9 +298,9 @@ describe('WebviewProvider', () => {
     it('should dispose all resources', async () => {
       await webviewProvider.initialize();
       await webviewProvider.createEditorWebview(mockUri);
-      
+
       webviewProvider.dispose();
-      
+
       expect(webviewProvider.getActivePanels()).toHaveLength(0);
       // Panel dispose is called internally through registered event handlers
     });

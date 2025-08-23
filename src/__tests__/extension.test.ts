@@ -30,7 +30,7 @@ const mockVscode = {
     })),
     getConfiguration: jest.fn(() => ({
       get: jest.fn(),
-      update: jest.fn()
+      update: jest.fn(),
     })),
     fs: {
       readFile: jest.fn(),
@@ -44,7 +44,10 @@ const mockVscode = {
   },
   Disposable: jest.fn(),
   FileSystemError: class extends Error {
-    constructor(message: string, public code: string) {
+    constructor(
+      message: string,
+      public code: string
+    ) {
       super(message);
     }
   },
@@ -67,11 +70,11 @@ describe('mdMagic Extension', () => {
       subscriptions: [],
       globalState: {
         get: jest.fn(),
-        update: jest.fn().mockResolvedValue(undefined)
-      }
+        update: jest.fn().mockResolvedValue(undefined),
+      },
     };
     jest.clearAllMocks();
-    
+
     // Reset singleton instance
     (ExtensionController as any).instance = undefined;
   });
@@ -115,12 +118,12 @@ describe('mdMagic Extension', () => {
       await extension.activate(mockContext);
       let controller = ExtensionController.getInstance();
       expect(controller).toBeDefined();
-      
+
       const disposeSpy = jest.spyOn(controller!, 'dispose');
-      
+
       // Then deactivate
       extension.deactivate();
-      
+
       expect(disposeSpy).toHaveBeenCalled();
       controller = ExtensionController.getInstance();
       expect(controller).toBeUndefined();

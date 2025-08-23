@@ -18,7 +18,7 @@ export interface Range {
 export enum EditorMode {
   Editor = 'editor',
   Viewer = 'viewer',
-  Split = 'split'
+  Split = 'split',
 }
 
 export interface MarkdownDocumentState {
@@ -43,7 +43,7 @@ export interface IMarkdownDocument {
   scrollPosition: number;
   selections: Range[];
   lastModified: Date;
-  
+
   updateContent(content: string): void;
   markDirty(): void;
   markClean(): void;
@@ -139,11 +139,11 @@ export class MarkdownDocument implements IMarkdownDocument {
   }
 
   public get selections(): Range[] {
-    return this._selections.map(sel => ({ ...sel }));
+    return this._selections.map((sel) => ({ ...sel }));
   }
 
   public set selections(value: Range[]) {
-    this._selections = value.map(sel => ({ ...sel }));
+    this._selections = value.map((sel) => ({ ...sel }));
   }
 
   public get lastModified(): Date {
@@ -171,7 +171,7 @@ export class MarkdownDocument implements IMarkdownDocument {
   }
 
   public updateSelections(selections: Range[]): void {
-    this._selections = selections.map(sel => ({ ...sel }));
+    this._selections = selections.map((sel) => ({ ...sel }));
   }
 
   public getState(): MarkdownDocumentState {
@@ -183,8 +183,8 @@ export class MarkdownDocument implements IMarkdownDocument {
       isDirty: this._isDirty,
       cursorPosition: { ...this._cursorPosition },
       scrollPosition: this._scrollPosition,
-      selections: this._selections.map(sel => ({ ...sel })),
-      lastModified: new Date(this._lastModified)
+      selections: this._selections.map((sel) => ({ ...sel })),
+      lastModified: new Date(this._lastModified),
     };
   }
 
@@ -194,31 +194,31 @@ export class MarkdownDocument implements IMarkdownDocument {
 
     // Basic markdown validation
     const lines = this._content.split('\n');
-    
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
+
       // Check for potential issues
       if (line.includes('<script>')) {
         errors.push({
           line: i + 1,
           column: line.indexOf('<script>') + 1,
           message: 'Script tags are not allowed in markdown',
-          severity: 'error'
+          severity: 'error',
         });
       }
-      
+
       // Check for malformed links
       const linkMatches = line.match(/\[([^\]]*)\]\(([^)]*)\)/g);
       if (linkMatches) {
-        linkMatches.forEach(match => {
+        linkMatches.forEach((match) => {
           const linkMatch = match.match(/\[([^\]]*)\]\(([^)]*)\)/);
           if (linkMatch && linkMatch[2].trim() === '') {
             warnings.push({
               line: i + 1,
               column: line.indexOf(match) + 1,
               message: 'Empty link URL detected',
-              severity: 'warning'
+              severity: 'warning',
             });
           }
         });
@@ -228,7 +228,7 @@ export class MarkdownDocument implements IMarkdownDocument {
     return {
       isValid: errors.length === 0,
       errors,
-      warnings
+      warnings,
     };
   }
 }

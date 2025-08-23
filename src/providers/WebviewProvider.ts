@@ -7,13 +7,13 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { Component } from '../controllers/ExtensionController';
-import { 
-  EditorMode, 
-  MessageType, 
-  WebviewMessage, 
-  WebviewState, 
-  WebviewPanelInfo, 
-  WebviewOptions 
+import {
+  EditorMode,
+  MessageType,
+  WebviewMessage,
+  WebviewState,
+  WebviewPanelInfo,
+  WebviewOptions,
 } from '../types/webview';
 
 export class WebviewProvider implements Component {
@@ -35,7 +35,7 @@ export class WebviewProvider implements Component {
    */
   public async initialize(): Promise<void> {
     console.log('[WebviewProvider] Initializing...');
-    
+
     // Register webview serializer for state restoration
     const serializer = new WebviewSerializer();
     this.context.subscriptions.push(
@@ -55,7 +55,7 @@ export class WebviewProvider implements Component {
     content: string = ''
   ): Promise<vscode.WebviewPanel> {
     const documentId = this.generateDocumentId(documentUri);
-    
+
     // Check if webview already exists for this document
     const existingPanel = this.getWebviewByDocumentId(documentId);
     if (existingPanel) {
@@ -80,14 +80,20 @@ export class WebviewProvider implements Component {
   /**
    * Create editor webview
    */
-  public async createEditorWebview(documentUri: vscode.Uri, content: string = ''): Promise<vscode.WebviewPanel> {
+  public async createEditorWebview(
+    documentUri: vscode.Uri,
+    content: string = ''
+  ): Promise<vscode.WebviewPanel> {
     return this.createWebview(documentUri, EditorMode.EDITOR, content);
   }
 
   /**
    * Create viewer webview
    */
-  public async createViewerWebview(documentUri: vscode.Uri, content: string = ''): Promise<vscode.WebviewPanel> {
+  public async createViewerWebview(
+    documentUri: vscode.Uri,
+    content: string = ''
+  ): Promise<vscode.WebviewPanel> {
     return this.createWebview(documentUri, EditorMode.VIEWER, content);
   }
 
@@ -108,7 +114,7 @@ export class WebviewProvider implements Component {
     // Send content to webview
     panelInfo.panel.webview.postMessage({
       type: MessageType.CONTENT_CHANGED,
-      payload: { content }
+      payload: { content },
     });
   }
 
@@ -147,7 +153,7 @@ export class WebviewProvider implements Component {
    * Get webview by document ID
    */
   public getWebviewByDocumentId(documentId: string): WebviewPanelInfo | undefined {
-    return Array.from(this.panels.values()).find(panel => panel.documentId === documentId);
+    return Array.from(this.panels.values()).find((panel) => panel.documentId === documentId);
   }
 
   /**
@@ -165,11 +171,11 @@ export class WebviewProvider implements Component {
     const panelInfo = this.panels.get(panelId);
     if (panelInfo) {
       panelInfo.state = { ...panelInfo.state, ...state };
-      
+
       // Send restored content to webview
       panelInfo.panel.webview.postMessage({
         type: 'setContent',
-        payload: { content: state.content }
+        payload: { content: state.content },
       });
     }
   }
@@ -179,7 +185,7 @@ export class WebviewProvider implements Component {
    */
   public dispose(): void {
     console.log('[WebviewProvider] Disposing...');
-    
+
     // Dispose all panels
     for (const [panelId, panelInfo] of this.panels) {
       try {
@@ -227,18 +233,18 @@ export class WebviewProvider implements Component {
         mode,
         content,
         isDirty: false,
-        lastModified: new Date()
+        lastModified: new Date(),
       },
       isActive: panel.active,
-      isVisible: panel.visible
+      isVisible: panel.visible,
     };
 
     // Set webview HTML content
     panel.webview.html = await this.getWebviewContent(mode);
 
     // Set up message handling
-    const messageDisposable = panel.webview.onDidReceiveMessage(
-      (message: WebviewMessage) => this.handleWebviewMessage(message, panelId)
+    const messageDisposable = panel.webview.onDidReceiveMessage((message: WebviewMessage) =>
+      this.handleWebviewMessage(message, panelId)
     );
 
     // Set up panel event handlers
@@ -267,11 +273,13 @@ export class WebviewProvider implements Component {
     setTimeout(() => {
       panel.webview.postMessage({
         type: 'setContent',
-        payload: { content }
+        payload: { content },
       });
     }, 100);
 
-    console.log(`[WebviewProvider] Created ${mode} webview for ${path.basename(documentUri.fsPath)}`);
+    console.log(
+      `[WebviewProvider] Created ${mode} webview for ${path.basename(documentUri.fsPath)}`
+    );
   }
 
   /**
@@ -283,10 +291,10 @@ export class WebviewProvider implements Component {
       retainContextWhenHidden: true,
       localResourceRoots: [
         vscode.Uri.file(path.join(this.extensionPath, 'src', 'webview')),
-        vscode.Uri.file(path.join(this.extensionPath, 'media'))
+        vscode.Uri.file(path.join(this.extensionPath, 'media')),
       ],
       enableFindWidget: true,
-      enableCommandUris: true
+      enableCommandUris: true,
     };
   }
 
@@ -354,13 +362,13 @@ export class WebviewProvider implements Component {
    */
   private handleWebviewReady(message: WebviewMessage, panelId: string): void {
     console.log(`[WebviewProvider] Webview ${panelId} is ready`);
-    
+
     const panelInfo = this.panels.get(panelId);
     if (panelInfo && panelInfo.state.content) {
       // Send initial content
       panelInfo.panel.webview.postMessage({
         type: 'setContent',
-        payload: { content: panelInfo.state.content }
+        payload: { content: panelInfo.state.content },
       });
     }
   }
@@ -394,7 +402,7 @@ export class WebviewProvider implements Component {
    */
   private handleExecuteCommand(message: WebviewMessage, panelId: string): void {
     const { command, args } = message.payload;
-    
+
     try {
       if (command === 'vscode.open') {
         vscode.env.openExternal(vscode.Uri.parse(args[0]));
@@ -425,15 +433,12 @@ export class WebviewProvider implements Component {
  * Webview serializer for state restoration
  */
 class WebviewSerializer implements vscode.WebviewPanelSerializer {
-  async deserializeWebviewPanel(
-    webviewPanel: vscode.WebviewPanel,
-    state: any
-  ): Promise<void> {
+  async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any): Promise<void> {
     console.log('[WebviewSerializer] Deserializing webview panel:', state);
-    
+
     // TODO: Restore webview state from serialized data
     // This will be called when VS Code restarts and needs to restore webviews
-    
+
     webviewPanel.webview.html = `
       <!DOCTYPE html>
       <html>

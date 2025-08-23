@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 export enum EditorMode {
   EDITOR = 'editor',
   VIEWER = 'viewer',
-  SPLIT = 'split'
+  SPLIT = 'split',
 }
 
 export enum MessageType {
@@ -17,7 +17,7 @@ export enum MessageType {
   EXECUTE_COMMAND = 'executeCommand',
   UPDATE_CONFIG = 'updateConfig',
   WEBVIEW_READY = 'webviewReady',
-  ERROR = 'error'
+  ERROR = 'error',
 }
 
 export interface WebviewMessage {

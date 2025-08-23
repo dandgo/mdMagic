@@ -8,7 +8,7 @@ import { ExtensionController } from './controllers/ExtensionController';
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   try {
     console.log('mdMagic extension is now active!');
-    
+
     // Initialize the extension controller
     const controller = new ExtensionController(context);
     await controller.initialize();
@@ -21,7 +21,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 // This method is called when your extension is deactivated
 export function deactivate(): void {
   console.log('mdMagic extension is being deactivated');
-  
+
   // Dispose the extension controller
   const controller = ExtensionController.getInstance();
   if (controller) {
