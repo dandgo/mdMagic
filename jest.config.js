@@ -26,5 +26,9 @@ module.exports = {
   modulePathIgnorePatterns: [
     '/out/',
     '/dist/'
-  ]
+  ],
+  moduleNameMapper: {
+    '^vscode$': '<rootDir>/__mocks__/vscode.js'
+  },
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js']
 };

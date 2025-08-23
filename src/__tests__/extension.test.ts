@@ -56,8 +56,7 @@ const mockVscode = {
   },
 };
 
-// Mock VS Code module
-jest.mock('vscode', () => mockVscode, { virtual: true });
+
 
 import * as extension from '../extension';
 import { ExtensionController } from '../controllers/ExtensionController';

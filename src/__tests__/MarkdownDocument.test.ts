@@ -2,23 +2,15 @@
  * Unit tests for MarkdownDocument
  */
 
-// Mock VS Code API first
-const mockVscode = {
-  Uri: {
-    file: jest.fn((path: string) => ({ toString: () => path, fsPath: path })),
-  },
-};
-
-jest.mock('vscode', () => mockVscode, { virtual: true });
-
 import { MarkdownDocument, EditorMode, Position, Range } from '../managers/MarkdownDocument';
+import * as vscode from 'vscode';
 
 describe('MarkdownDocument', () => {
   let mockUri: any;
   let document: MarkdownDocument;
 
   beforeEach(() => {
-    mockUri = mockVscode.Uri.file('/test/document.md');
+    mockUri = vscode.Uri.file('/test/document.md');
     document = new MarkdownDocument(mockUri, '# Test Document\n\nHello world!');
   });
 

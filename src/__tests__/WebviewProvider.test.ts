@@ -2,51 +2,6 @@
  * Unit tests for WebviewProvider
  */
 
-// Mock fs first
-jest.mock('fs', () => ({
-  promises: {
-    readFile: jest.fn(() => Promise.resolve('<html>Test Template</html>')),
-  },
-}));
-
-// Mock vscode module
-jest.mock('vscode', () => {
-  const mockWebviewPanel = {
-    webview: {
-      html: '',
-      onDidReceiveMessage: jest.fn(() => ({ dispose: jest.fn() })),
-      postMessage: jest.fn(),
-    },
-    onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
-    onDidChangeViewState: jest.fn(() => ({ dispose: jest.fn() })),
-    title: 'Test Panel',
-    active: true,
-    visible: true,
-    reveal: jest.fn(),
-    dispose: jest.fn(),
-  };
-
-  return {
-    window: {
-      createWebviewPanel: jest.fn(() => mockWebviewPanel),
-      registerWebviewPanelSerializer: jest.fn(() => ({ dispose: jest.fn() })),
-      showErrorMessage: jest.fn(),
-    },
-    ViewColumn: {
-      One: 1,
-    },
-    Uri: {
-      file: jest.fn((path: string) => ({ fsPath: path, toString: () => `file://${path}` })),
-    },
-    commands: {
-      executeCommand: jest.fn(),
-    },
-    env: {
-      openExternal: jest.fn(),
-    },
-  };
-});
-
 import { WebviewProvider } from '../providers/WebviewProvider';
 import { EditorMode, MessageType } from '../types/webview';
 import * as vscode from 'vscode';

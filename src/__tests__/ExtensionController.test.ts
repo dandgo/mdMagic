@@ -56,7 +56,7 @@ const mockVscode = {
   },
 };
 
-jest.mock('vscode', () => mockVscode, { virtual: true });
+
 
 // Mock ConfigManager
 const mockConfigManager = {
