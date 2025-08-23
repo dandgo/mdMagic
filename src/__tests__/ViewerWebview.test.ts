@@ -61,10 +61,10 @@ describe('Enhanced Viewer Webview Implementation (Task 2.3)', () => {
 
     it('should create viewer webview successfully', async () => {
       const panel = await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
-      
+
       expect(panel).toBeDefined();
       expect(panel.webview.html).toBeDefined();
-      
+
       // Verify the correct parameters were passed to createWebviewPanel
       expect(vscode.window.createWebviewPanel).toHaveBeenCalledWith(
         'mdMagic.viewer',
@@ -76,7 +76,7 @@ describe('Enhanced Viewer Webview Implementation (Task 2.3)', () => {
 
     it('should create viewer webview with correct view type', async () => {
       await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
-      
+
       // Verify createWebviewPanel was called with viewer type
       expect(vscode.window.createWebviewPanel).toHaveBeenCalledWith(
         'mdMagic.viewer',
@@ -88,11 +88,11 @@ describe('Enhanced Viewer Webview Implementation (Task 2.3)', () => {
 
     it('should set up proper webview options', async () => {
       await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
-      
+
       // Verify webview options include necessary settings
       const createCall = (vscode.window.createWebviewPanel as jest.Mock).mock.calls[0];
       const options = createCall[3];
-      
+
       expect(options.enableScripts).toBe(true);
       expect(options.retainContextWhenHidden).toBe(true);
       expect(options.enableFindWidget).toBe(true);
@@ -113,13 +113,14 @@ describe('Enhanced Viewer Webview Implementation (Task 2.3)', () => {
       );
 
       await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
-      
-      const mockWebview = (vscode.window.createWebviewPanel as jest.Mock).mock.results[0].value.webview;
-      
+
+      const mockWebview = (vscode.window.createWebviewPanel as jest.Mock).mock.results[0].value
+        .webview;
+
       // Should process viewer.js since it's referenced in the mocked template
       expect(mockWebview.asWebviewUri).toHaveBeenCalledWith(
         expect.objectContaining({
-          fsPath: expect.stringContaining('scripts/viewer.js')
+          fsPath: expect.stringContaining('scripts/viewer.js'),
         })
       );
     });
@@ -132,18 +133,15 @@ describe('Enhanced Viewer Webview Implementation (Task 2.3)', () => {
       );
 
       await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
-      
-      const mockWebview = (vscode.window.createWebviewPanel as jest.Mock).mock.results[0].value.webview;
-      
+
+      const mockWebview = (vscode.window.createWebviewPanel as jest.Mock).mock.results[0].value
+        .webview;
+
       // Should not process monaco-loader.js or editor.js for viewer template
       const calls = mockWebview.asWebviewUri.mock.calls;
-      const monacoLoaderCalls = calls.filter(call => 
-        call[0].fsPath.includes('monaco-loader.js')
-      );
-      const editorJsCalls = calls.filter(call => 
-        call[0].fsPath.includes('editor.js')
-      );
-      
+      const monacoLoaderCalls = calls.filter((call) => call[0].fsPath.includes('monaco-loader.js'));
+      const editorJsCalls = calls.filter((call) => call[0].fsPath.includes('editor.js'));
+
       expect(monacoLoaderCalls).toHaveLength(0);
       expect(editorJsCalls).toHaveLength(0);
     });
@@ -156,21 +154,22 @@ describe('Enhanced Viewer Webview Implementation (Task 2.3)', () => {
 
     it('should send initial content to webview', async () => {
       await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
-      
-      const mockWebview = (vscode.window.createWebviewPanel as jest.Mock).mock.results[0].value.webview;
-      
+
+      const mockWebview = (vscode.window.createWebviewPanel as jest.Mock).mock.results[0].value
+        .webview;
+
       // Should send content after a delay (setTimeout)
-      await new Promise(resolve => setTimeout(resolve, 150));
-      
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       expect(mockWebview.postMessage).toHaveBeenCalledWith({
         type: 'setContent',
-        payload: { content: testMarkdownContent }
+        payload: { content: testMarkdownContent },
       });
     });
 
     it('should update webview content', async () => {
       await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
-      
+
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
       const newContent = '# Updated Content';
@@ -190,31 +189,37 @@ describe('Enhanced Viewer Webview Implementation (Task 2.3)', () => {
 
     it('should handle webview ready message', async () => {
       await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
-      
+
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
 
       // Should not throw error when handling webview ready
       expect(() => {
-        webviewProvider.handleWebviewMessage({
-          type: 'webviewReady' as any,
-          payload: {}
-        }, panelId);
+        webviewProvider.handleWebviewMessage(
+          {
+            type: 'webviewReady' as any,
+            payload: {},
+          },
+          panelId
+        );
       }).not.toThrow();
     });
 
     it('should handle execute command messages', async () => {
       await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
-      
+
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
 
       // Should handle command execution without error
       expect(() => {
-        webviewProvider.handleWebviewMessage({
-          type: 'executeCommand' as any,
-          payload: { command: 'refresh' }
-        }, panelId);
+        webviewProvider.handleWebviewMessage(
+          {
+            type: 'executeCommand' as any,
+            payload: { command: 'refresh' },
+          },
+          panelId
+        );
       }).not.toThrow();
     });
   });
@@ -226,14 +231,14 @@ describe('Enhanced Viewer Webview Implementation (Task 2.3)', () => {
 
     it('should create webview in viewer mode', async () => {
       const panel = await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
-      
+
       const panels = webviewProvider.getActivePanels();
       expect(panels[0].mode).toBe(EditorMode.VIEWER);
     });
 
     it('should load viewer template for viewer mode', async () => {
       await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
-      
+
       // Verify that the template loading was attempted for viewer mode
       const fs = require('fs');
       expect(fs.promises.readFile).toHaveBeenCalledWith(
@@ -248,7 +253,7 @@ describe('Enhanced Viewer Webview Implementation (Task 2.3)', () => {
       fs.promises.readFile.mockRejectedValueOnce(new Error('Template not found'));
 
       const panel = await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
-      
+
       // Should still create panel but with error content
       expect(panel).toBeDefined();
       expect(panel.webview.html).toContain('Failed to load viewer template');
@@ -262,11 +267,11 @@ describe('Enhanced Viewer Webview Implementation (Task 2.3)', () => {
 
     it('should preserve viewer state', async () => {
       await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
-      
+
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
       const state = webviewProvider.getWebviewState(panelId);
-      
+
       expect(state).toBeDefined();
       expect(state?.mode).toBe(EditorMode.VIEWER);
       expect(state?.content).toBe(testMarkdownContent);
@@ -274,20 +279,20 @@ describe('Enhanced Viewer Webview Implementation (Task 2.3)', () => {
 
     it('should restore viewer state', async () => {
       await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
-      
+
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
-      
+
       const newState = {
         documentId: 'test-doc',
         mode: EditorMode.VIEWER,
         content: '# Restored Content',
         isDirty: false,
-        lastModified: new Date()
+        lastModified: new Date(),
       };
 
       webviewProvider.restoreWebviewState(panelId, newState);
-      
+
       const restoredState = webviewProvider.getWebviewState(panelId);
       expect(restoredState?.content).toBe('# Restored Content');
     });
@@ -298,7 +303,7 @@ describe('Viewer Asset Files', () => {
   it('should have viewer.js file in the correct location', () => {
     const fs = require('fs');
     const path = require('path');
-    
+
     const viewerJsPath = path.join(__dirname, '..', 'webview', 'scripts', 'viewer.js');
     expect(fs.existsSync(viewerJsPath)).toBe(true);
   });
@@ -306,7 +311,7 @@ describe('Viewer Asset Files', () => {
   it('should have viewer.html template file', () => {
     const fs = require('fs');
     const path = require('path');
-    
+
     const viewerHtmlPath = path.join(__dirname, '..', 'webview', 'templates', 'viewer.html');
     expect(fs.existsSync(viewerHtmlPath)).toBe(true);
   });
