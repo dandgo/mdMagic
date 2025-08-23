@@ -7,7 +7,9 @@ module.exports = {
     '**/?(*.)+(spec|test).ts'
   ],
   transform: {
-    '^.+\\.ts$': 'ts-jest'
+    '^.+\\.ts$': ['ts-jest', {
+      tsconfig: 'tsconfig.test.json'
+    }]
   },
   collectCoverageFrom: [
     'src/**/*.ts',
@@ -18,6 +20,10 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   testPathIgnorePatterns: [
     '/node_modules/',
+    '/out/',
+    '/dist/'
+  ],
+  modulePathIgnorePatterns: [
     '/out/',
     '/dist/'
   ]
