@@ -26,6 +26,10 @@ const mockVscode = {
     onDidCloseTextDocument: jest.fn(() => ({
       dispose: jest.fn(),
     })),
+    getConfiguration: jest.fn(() => ({
+      get: jest.fn(),
+      update: jest.fn()
+    })),
     fs: {
       readFile: jest.fn(),
       writeFile: jest.fn(),
@@ -49,6 +53,30 @@ const mockVscode = {
 
 jest.mock('vscode', () => mockVscode, { virtual: true });
 
+// Mock ConfigManager
+const mockConfigManager = {
+  id: 'config-manager',
+  name: 'Configuration Manager',
+  initialize: jest.fn().mockResolvedValue(void 0),
+  dispose: jest.fn(),
+};
+
+// Mock DocumentManager  
+const mockDocumentManager = {
+  id: 'document-manager',
+  name: 'Document Manager',
+  initialize: jest.fn().mockResolvedValue(void 0),
+  dispose: jest.fn(),
+};
+
+jest.mock('../managers/ConfigManager', () => ({
+  ConfigManager: jest.fn().mockImplementation(() => mockConfigManager),
+}));
+
+jest.mock('../managers/DocumentManager', () => ({
+  DocumentManager: jest.fn().mockImplementation(() => mockDocumentManager),
+}));
+
 import { ExtensionController, Component } from '../controllers/ExtensionController';
 
 describe('ExtensionController', () => {
@@ -58,8 +86,18 @@ describe('ExtensionController', () => {
   beforeEach(() => {
     mockContext = {
       subscriptions: [],
+      globalState: {
+        get: jest.fn(),
+        update: jest.fn().mockResolvedValue(undefined)
+      }
     };
     jest.clearAllMocks();
+    
+    // Reset component mocks
+    mockConfigManager.initialize.mockClear();
+    mockConfigManager.dispose.mockClear();
+    mockDocumentManager.initialize.mockClear();
+    mockDocumentManager.dispose.mockClear();
     
     // Reset singleton instance
     (ExtensionController as any).instance = undefined;
