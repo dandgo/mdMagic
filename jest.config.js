@@ -14,7 +14,8 @@ module.exports = {
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
-    '!src/test/**/*'
+    '!src/test/**/*',
+    '!src/**/__tests__/**/*'
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
@@ -30,5 +31,8 @@ module.exports = {
   moduleNameMapper: {
     '^vscode$': '<rootDir>/__mocks__/vscode.js'
   },
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js']
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  clearMocks: true,
+  restoreMocks: true,
+  testTimeout: 10000
 };

@@ -2,9 +2,6 @@
  * Jest setup file for global configurations and mocks
  */
 
-// Make Jest globals available
-global.jest = require('jest');
-
 // Mock path module
 jest.mock('path', () => ({
   join: (...args) => args.join('/'),

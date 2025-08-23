@@ -16,7 +16,7 @@ describe('MarkdownDocument', () => {
 
   describe('constructor', () => {
     it('should create document with initial content', () => {
-      expect(document.id).toBe('/test/document.md');
+      expect(document.id).toBe('file:///test/document.md');
       expect(document.uri).toBe(mockUri);
       expect(document.content).toBe('# Test Document\n\nHello world!');
       expect(document.mode).toBe(EditorMode.Editor);
