@@ -47,10 +47,10 @@ export class CommandManager implements ICommandManager {
 
     try {
       this.logInfo('Initializing Command Manager...');
-      
+
       // Register core commands
       await this.registerCoreCommands();
-      
+
       this.isInitialized = true;
       this.logInfo('Command Manager initialized successfully');
     } catch (error) {
@@ -76,7 +76,7 @@ export class CommandManager implements ICommandManager {
         execute: async () => {
           const modeManager = controller?.getComponent('modeManager');
           const activeEditor = vscode.window.activeTextEditor;
-          
+
           if (!activeEditor || !activeEditor.document.fileName.endsWith('.md')) {
             vscode.window.showErrorMessage('Please open a markdown file first');
             return;
@@ -92,8 +92,8 @@ export class CommandManager implements ICommandManager {
         canExecute: () => {
           const activeEditor = vscode.window.activeTextEditor;
           return activeEditor?.document.fileName.endsWith('.md') ?? false;
-        }
-      }
+        },
+      },
     });
 
     // Switch to Editor Command
@@ -118,8 +118,8 @@ export class CommandManager implements ICommandManager {
         canExecute: (args?: any[]) => {
           const uri = args?.[0] || vscode.window.activeTextEditor?.document?.uri;
           return uri?.path.endsWith('.md') ?? false;
-        }
-      }
+        },
+      },
     });
 
     // Switch to Viewer Command
@@ -144,8 +144,8 @@ export class CommandManager implements ICommandManager {
         canExecute: (args?: any[]) => {
           const uri = args?.[0] || vscode.window.activeTextEditor?.document?.uri;
           return uri?.path.endsWith('.md') ?? false;
-        }
-      }
+        },
+      },
     });
 
     // Format Bold Command
@@ -160,8 +160,8 @@ export class CommandManager implements ICommandManager {
         canExecute: () => {
           const activeEditor = vscode.window.activeTextEditor;
           return activeEditor?.document.fileName.endsWith('.md') ?? false;
-        }
-      }
+        },
+      },
     });
 
     // Format Italic Command
@@ -176,8 +176,8 @@ export class CommandManager implements ICommandManager {
         canExecute: () => {
           const activeEditor = vscode.window.activeTextEditor;
           return activeEditor?.document.fileName.endsWith('.md') ?? false;
-        }
-      }
+        },
+      },
     });
 
     // Insert Link Command
@@ -189,25 +189,25 @@ export class CommandManager implements ICommandManager {
         execute: async () => {
           const linkText = await vscode.window.showInputBox({
             prompt: 'Enter link text',
-            placeHolder: 'Link text'
+            placeHolder: 'Link text',
           });
-          
+
           if (!linkText) {
             return;
           }
-          
+
           const linkUrl = await vscode.window.showInputBox({
             prompt: 'Enter link URL',
-            placeHolder: 'https://example.com'
+            placeHolder: 'https://example.com',
           });
-          
+
           if (!linkUrl) {
             return;
           }
-          
+
           const activeEditor = vscode.window.activeTextEditor;
           if (activeEditor) {
-            await activeEditor.edit(editBuilder => {
+            await activeEditor.edit((editBuilder) => {
               const selection = activeEditor.selection;
               editBuilder.replace(selection, `[${linkText}](${linkUrl})`);
             });
@@ -216,8 +216,8 @@ export class CommandManager implements ICommandManager {
         canExecute: () => {
           const activeEditor = vscode.window.activeTextEditor;
           return activeEditor?.document.fileName.endsWith('.md') ?? false;
-        }
-      }
+        },
+      },
     });
 
     // Keep existing commands for backward compatibility
@@ -228,8 +228,8 @@ export class CommandManager implements ICommandManager {
       handler: {
         execute: async (args?: any[]) => {
           return this.executeCommand('mdMagic.switchToEditor', args);
-        }
-      }
+        },
+      },
     });
 
     this.registerCommand({
@@ -239,8 +239,8 @@ export class CommandManager implements ICommandManager {
       handler: {
         execute: async (args?: any[]) => {
           return this.executeCommand('mdMagic.switchToViewer', args);
-        }
-      }
+        },
+      },
     });
 
     this.logInfo(`Registered ${this.commands.size} commands`);
@@ -257,24 +257,23 @@ export class CommandManager implements ICommandManager {
       }
 
       // Register with VS Code
-      const disposable = vscode.commands.registerCommand(
-        command.id,
-        async (...args: any[]) => {
-          try {
-            // Validate command can execute
-            if (command.handler.canExecute && !command.handler.canExecute(args)) {
-              this.logWarning(`Command ${command.id} cannot execute in current context`);
-              return;
-            }
-
-            // Execute command
-            return await command.handler.execute(args);
-          } catch (error) {
-            this.logError(`Failed to execute command ${command.id}`, error);
-            vscode.window.showErrorMessage(`Failed to execute ${command.title}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const disposable = vscode.commands.registerCommand(command.id, async (...args: any[]) => {
+        try {
+          // Validate command can execute
+          if (command.handler.canExecute && !command.handler.canExecute(args)) {
+            this.logWarning(`Command ${command.id} cannot execute in current context`);
+            return;
           }
+
+          // Execute command
+          return await command.handler.execute(args);
+        } catch (error) {
+          this.logError(`Failed to execute command ${command.id}`, error);
+          vscode.window.showErrorMessage(
+            `Failed to execute ${command.title}: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
         }
-      );
+      });
 
       // Store command definition and disposable
       this.commands.set(command.id, command);
@@ -333,10 +332,10 @@ export class CommandManager implements ICommandManager {
       return;
     }
 
-    await activeEditor.edit(editBuilder => {
+    await activeEditor.edit((editBuilder) => {
       const selection = activeEditor.selection;
       const selectedText = activeEditor.document.getText(selection);
-      
+
       if (selectedText) {
         // Wrap selected text
         editBuilder.replace(selection, `${before}${selectedText}${after}`);
@@ -358,12 +357,12 @@ export class CommandManager implements ICommandManager {
    */
   public dispose(): void {
     this.logInfo('Disposing Command Manager...');
-    
-    this.disposables.forEach(disposable => disposable.dispose());
+
+    this.disposables.forEach((disposable) => disposable.dispose());
     this.disposables = [];
     this.commands.clear();
     this.isInitialized = false;
-    
+
     this.logInfo('Command Manager disposed');
   }
 
@@ -386,7 +385,7 @@ export class CommandManager implements ICommandManager {
    */
   private logError(message: string, error?: unknown): void {
     console.error(`[mdMagic CommandManager Error] ${message}`);
-    
+
     if (error instanceof Error && error.stack) {
       console.error(`[mdMagic CommandManager Error Stack] ${error.stack}`);
     }
