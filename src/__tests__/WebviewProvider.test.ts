@@ -247,6 +247,24 @@ describe('WebviewProvider', () => {
       const updatedPanels = webviewProvider.getActivePanels();
       expect(updatedPanels[0].state.content).toBe('restored content');
     });
+
+    it('should serialize webview state for VS Code restarts', () => {
+      const panels = webviewProvider.getActivePanels();
+      const panelId = panels[0].id;
+      const panel = panels[0].panel;
+
+      // Check that getState function was set on the panel
+      expect(typeof (panel as any).getState).toBe('function');
+
+      // Call getState to ensure it returns serializable data
+      const state = (panel as any).getState();
+      expect(state).toBeDefined();
+      expect(state.documentId).toBeDefined();
+      expect(state.mode).toBe(EditorMode.EDITOR);
+      expect(state.content).toBe('test content');
+      expect(state.documentUri).toBeDefined();
+      expect(typeof state.lastModified).toBe('string'); // Should be ISO string
+    });
   });
 
   describe('disposal', () => {
