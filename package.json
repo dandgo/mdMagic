@@ -36,7 +36,10 @@
       "properties": {
         "mdMagic.defaultMode": {
           "type": "string",
-          "enum": ["editor", "viewer"],
+          "enum": [
+            "editor",
+            "viewer"
+          ],
           "default": "viewer",
           "description": "Default mode when opening markdown files"
         },
@@ -107,21 +110,24 @@
     "format:check": "prettier --check src/**/*.ts"
   },
   "devDependencies": {
-    "@types/vscode": "^1.74.0",
+    "@types/jest": "^29.5.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
+    "@types/vscode": "^1.74.0",
     "@typescript-eslint/eslint-plugin": "^8.39.0",
     "@typescript-eslint/parser": "^8.39.0",
-    "eslint": "^9.32.0",
-    "typescript": "^5.9.2",
-    "ts-loader": "^9.5.2",
-    "webpack": "^5.101.0",
-    "webpack-cli": "^6.0.1",
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
-    "prettier": "^3.0.0",
-    "@types/jest": "^29.5.0",
+    "eslint": "^9.32.0",
     "jest": "^29.5.0",
-    "ts-jest": "^29.1.0"
+    "prettier": "^3.0.0",
+    "ts-jest": "^29.1.0",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.9.2",
+    "webpack": "^5.101.0",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "monaco-editor": "^0.52.2"
   }
 }
