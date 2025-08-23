@@ -8,6 +8,7 @@ const mockVscode = {
   window: {
     showInformationMessage: jest.fn(),
     showErrorMessage: jest.fn(),
+    showWarningMessage: jest.fn(),
   },
   commands: {
     registerCommand: jest.fn(),
@@ -16,8 +17,34 @@ const mockVscode = {
     onDidChangeConfiguration: jest.fn(() => ({
       dispose: jest.fn(),
     })),
+    onDidChangeTextDocument: jest.fn(() => ({
+      dispose: jest.fn(),
+    })),
+    onDidSaveTextDocument: jest.fn(() => ({
+      dispose: jest.fn(),
+    })),
+    onDidCloseTextDocument: jest.fn(() => ({
+      dispose: jest.fn(),
+    })),
+    fs: {
+      readFile: jest.fn(),
+      writeFile: jest.fn(),
+    },
+    createFileSystemWatcher: jest.fn(() => ({
+      onDidChange: jest.fn(),
+      onDidDelete: jest.fn(),
+      dispose: jest.fn(),
+    })),
   },
   Disposable: jest.fn(),
+  FileSystemError: class extends Error {
+    constructor(message: string, public code: string) {
+      super(message);
+    }
+  },
+  Uri: {
+    file: jest.fn((path: string) => ({ toString: () => path, fsPath: path })),
+  },
 };
 
 // Mock VS Code module

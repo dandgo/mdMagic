@@ -60,10 +60,10 @@ export class ExtensionController {
   private async registerComponents(): Promise<void> {
     this.logInfo('Registering components...');
     
-    // TODO: Register actual components when they are implemented
-    // Example:
-    // const documentManager = new DocumentManager(this.context);
-    // await this.registerComponent(documentManager);
+    // Register DocumentManager
+    const { DocumentManager } = require('../managers/DocumentManager');
+    const documentManager = new DocumentManager(this.context);
+    await this.registerComponent(documentManager);
     
     this.logInfo('Component registration complete');
   }
