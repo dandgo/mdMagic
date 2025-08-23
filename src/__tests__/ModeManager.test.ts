@@ -2,7 +2,12 @@
  * ModeManager Tests
  */
 
-import { ModeManager, IModeManager, ModeChangeEvent, DocumentModeState } from '../managers/ModeManager';
+import {
+  ModeManager,
+  IModeManager,
+  ModeChangeEvent,
+  DocumentModeState,
+} from '../managers/ModeManager';
 import { EditorMode } from '../managers/MarkdownDocument';
 import { IDocumentManager } from '../managers/DocumentManager';
 import { IConfigManager } from '../managers/ConfigManager';
@@ -144,7 +149,7 @@ describe('ModeManager', () => {
       expect(initialMode).toBe(EditorMode.Viewer);
 
       await modeManager.switchMode(testDocumentId, EditorMode.Editor);
-      
+
       const newMode = modeManager.getCurrentMode(testDocumentId);
       expect(newMode).toBe(EditorMode.Editor);
     });
@@ -156,23 +161,23 @@ describe('ModeManager', () => {
 
     it('should preserve cursor position during mode switch', async () => {
       mockDocument.cursorPosition = { line: 5, character: 10 };
-      
+
       await modeManager.switchMode(testDocumentId, EditorMode.Editor);
-      
+
       expect(mockDocument.updateCursorPosition).toHaveBeenCalledWith({ line: 5, character: 10 });
     });
 
     it('should preserve scroll position during mode switch', async () => {
       mockDocument.scrollPosition = 100;
-      
+
       await modeManager.switchMode(testDocumentId, EditorMode.Editor);
-      
+
       expect(mockDocument.updateScrollPosition).toHaveBeenCalledWith(100);
     });
 
     it('should not switch if already in target mode', async () => {
       await modeManager.switchMode(testDocumentId, EditorMode.Viewer);
-      
+
       // Should already be in viewer mode
       const mode = modeManager.getCurrentMode(testDocumentId);
       expect(mode).toBe(EditorMode.Viewer);
@@ -181,9 +186,9 @@ describe('ModeManager', () => {
     it('should notify mode change listeners', async () => {
       const listener = jest.fn();
       modeManager.registerModeChangeListener(listener);
-      
+
       await modeManager.switchMode(testDocumentId, EditorMode.Editor);
-      
+
       expect(listener).toHaveBeenCalledWith(
         expect.objectContaining({
           documentId: testDocumentId,
@@ -196,7 +201,7 @@ describe('ModeManager', () => {
 
     it('should handle document not found gracefully', async () => {
       mockDocumentManager.getDocument.mockReturnValue(undefined);
-      
+
       await expect(modeManager.switchMode('nonexistent', EditorMode.Editor)).resolves.not.toThrow();
     });
   });
@@ -226,7 +231,7 @@ describe('ModeManager', () => {
     it('should register mode change listener', () => {
       const listener = jest.fn();
       const disposable = modeManager.registerModeChangeListener(listener);
-      
+
       expect(disposable).toBeDefined();
       expect(typeof disposable.dispose).toBe('function');
     });
@@ -234,9 +239,9 @@ describe('ModeManager', () => {
     it('should remove listener when disposed', async () => {
       const listener = jest.fn();
       const disposable = modeManager.registerModeChangeListener(listener);
-      
+
       disposable.dispose();
-      
+
       await modeManager.switchMode(testDocumentId, EditorMode.Editor);
       expect(listener).not.toHaveBeenCalled();
     });
@@ -244,12 +249,12 @@ describe('ModeManager', () => {
     it('should handle multiple listeners', async () => {
       const listener1 = jest.fn();
       const listener2 = jest.fn();
-      
+
       modeManager.registerModeChangeListener(listener1);
       modeManager.registerModeChangeListener(listener2);
-      
+
       await modeManager.switchMode(testDocumentId, EditorMode.Editor);
-      
+
       expect(listener1).toHaveBeenCalled();
       expect(listener2).toHaveBeenCalled();
     });
@@ -259,11 +264,13 @@ describe('ModeManager', () => {
         throw new Error('Listener error');
       });
       const normalListener = jest.fn();
-      
+
       modeManager.registerModeChangeListener(errorListener);
       modeManager.registerModeChangeListener(normalListener);
-      
-      await expect(modeManager.switchMode(testDocumentId, EditorMode.Editor)).resolves.not.toThrow();
+
+      await expect(
+        modeManager.switchMode(testDocumentId, EditorMode.Editor)
+      ).resolves.not.toThrow();
       expect(normalListener).toHaveBeenCalled();
     });
   });
@@ -280,7 +287,7 @@ describe('ModeManager', () => {
 
     it('should return mode state for tracked document', async () => {
       await modeManager.switchMode(testDocumentId, EditorMode.Editor);
-      
+
       const state = modeManager.getDocumentModeState(testDocumentId);
       expect(state).toEqual(
         expect.objectContaining({
@@ -299,18 +306,18 @@ describe('ModeManager', () => {
 
     it('should set document to configured default mode', async () => {
       mockConfigManager.getConfigurationValue.mockReturnValue('editor');
-      
+
       await modeManager.setDefaultMode(testDocumentId);
-      
+
       const mode = modeManager.getCurrentMode(testDocumentId);
       expect(mode).toBe(EditorMode.Editor);
     });
 
     it('should handle viewer as default mode', async () => {
       mockConfigManager.getConfigurationValue.mockReturnValue('viewer');
-      
+
       await modeManager.setDefaultMode(testDocumentId);
-      
+
       const mode = modeManager.getCurrentMode(testDocumentId);
       expect(mode).toBe(EditorMode.Viewer);
     });
@@ -322,7 +329,7 @@ describe('ModeManager', () => {
 
     beforeEach(async () => {
       await modeManager.initialize();
-      
+
       // Setup mock documents
       mockDocumentManager.getDocument.mockImplementation((uri) => {
         const id = uri.toString();
@@ -341,7 +348,7 @@ describe('ModeManager', () => {
     it('should track modes independently for multiple documents', async () => {
       await modeManager.switchMode(doc1Id, EditorMode.Editor);
       await modeManager.switchMode(doc2Id, EditorMode.Viewer);
-      
+
       expect(modeManager.getCurrentMode(doc1Id)).toBe(EditorMode.Editor);
       expect(modeManager.getCurrentMode(doc2Id)).toBe(EditorMode.Viewer);
     });
@@ -350,10 +357,10 @@ describe('ModeManager', () => {
       // Switch both documents to different modes to create state objects
       await modeManager.switchMode(doc1Id, EditorMode.Editor);
       await modeManager.switchMode(doc2Id, EditorMode.Split);
-      
+
       const doc1State = modeManager.getDocumentModeState(doc1Id);
       const doc2State = modeManager.getDocumentModeState(doc2Id);
-      
+
       // States should be independent
       expect(doc1State).toBeDefined();
       expect(doc2State).toBeDefined();
@@ -366,12 +373,12 @@ describe('ModeManager', () => {
   describe('dispose', () => {
     it('should clean up resources', async () => {
       await modeManager.initialize();
-      
+
       const listener = jest.fn();
       modeManager.registerModeChangeListener(listener);
-      
+
       modeManager.dispose();
-      
+
       // Should not receive notifications after disposal
       await modeManager.switchMode(testDocumentId, EditorMode.Editor);
       expect(listener).not.toHaveBeenCalled();

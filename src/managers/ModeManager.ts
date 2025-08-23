@@ -221,12 +221,12 @@ export class ModeManager implements IModeManager {
    */
   public async setDefaultMode(documentId: string): Promise<void> {
     let targetMode = EditorMode.Viewer; // fallback default
-    
+
     if (this.configManager && typeof this.configManager.getConfigurationValue === 'function') {
       const defaultMode = this.configManager.getConfigurationValue('defaultMode');
       targetMode = defaultMode === 'editor' ? EditorMode.Editor : EditorMode.Viewer;
     }
-    
+
     await this.switchMode(documentId, targetMode);
   }
 
@@ -236,7 +236,10 @@ export class ModeManager implements IModeManager {
   private async saveCurrentState(
     documentId: string,
     currentMode: EditorMode
-  ): Promise<{ cursorPosition?: { line: number; character: number }; scrollPosition?: number } | null> {
+  ): Promise<{
+    cursorPosition?: { line: number; character: number };
+    scrollPosition?: number;
+  } | null> {
     try {
       if (this.documentManager && typeof this.documentManager.getDocument === 'function') {
         const document = this.documentManager.getDocument(vscode.Uri.parse(documentId));
@@ -281,7 +284,10 @@ export class ModeManager implements IModeManager {
         }
 
         // Restore scroll position
-        if (state.scrollPosition !== undefined && typeof document.updateScrollPosition === 'function') {
+        if (
+          state.scrollPosition !== undefined &&
+          typeof document.updateScrollPosition === 'function'
+        ) {
           document.updateScrollPosition(state.scrollPosition);
         }
 
@@ -300,7 +306,7 @@ export class ModeManager implements IModeManager {
       // Get mode-specific settings from configuration
       if (this.configManager && typeof this.configManager.getConfiguration === 'function') {
         const config = this.configManager.getConfiguration();
-        
+
         // Apply mode-specific configurations
         // This could include toolbar visibility, theme settings, etc.
         switch (mode) {
@@ -325,7 +331,11 @@ export class ModeManager implements IModeManager {
   /**
    * Notify mode change listeners
    */
-  private notifyModeChange(documentId: string, previousMode: EditorMode, currentMode: EditorMode): void {
+  private notifyModeChange(
+    documentId: string,
+    previousMode: EditorMode,
+    currentMode: EditorMode
+  ): void {
     const event: ModeChangeEvent = {
       documentId,
       previousMode,
@@ -357,7 +367,7 @@ export class ModeManager implements IModeManager {
     if (event.type === 'state') {
       const documentId = event.document.id;
       const modeState = this.documentModes.get(documentId);
-      
+
       if (modeState) {
         // Update our tracking state
         modeState.cursorPosition = event.document.cursorPosition;
