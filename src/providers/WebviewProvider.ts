@@ -37,7 +37,7 @@ export class WebviewProvider implements Component {
     console.log('[WebviewProvider] Initializing...');
 
     // Register webview serializer for state restoration
-    const serializer = new WebviewSerializer();
+    const serializer = new WebviewSerializer(this);
     this.context.subscriptions.push(
       vscode.window.registerWebviewPanelSerializer('mdMagic.editor', serializer),
       vscode.window.registerWebviewPanelSerializer('mdMagic.viewer', serializer)
@@ -242,6 +242,19 @@ export class WebviewProvider implements Component {
     // Set webview HTML content
     panel.webview.html = await this.getWebviewContent(mode);
 
+    // Set up state serialization
+    const getState = () => ({
+      documentId,
+      mode,
+      content: panelInfo.state.content,
+      isDirty: panelInfo.state.isDirty,
+      lastModified: panelInfo.state.lastModified.toISOString(),
+      documentUri: documentUri.toString(),
+    });
+
+    // Set the state getter for serialization
+    (panel as any).getState = getState;
+
     // Set up message handling
     const messageDisposable = panel.webview.onDidReceiveMessage((message: WebviewMessage) =>
       this.handleWebviewMessage(message, panelId)
@@ -433,23 +446,98 @@ export class WebviewProvider implements Component {
  * Webview serializer for state restoration
  */
 class WebviewSerializer implements vscode.WebviewPanelSerializer {
+  constructor(private webviewProvider: WebviewProvider) {}
+
   async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any): Promise<void> {
     console.log('[WebviewSerializer] Deserializing webview panel:', state);
 
-    // TODO: Restore webview state from serialized data
-    // This will be called when VS Code restarts and needs to restore webviews
+    try {
+      // Extract state information
+      const { documentId, mode, content, isDirty, lastModified, documentUri } = state;
 
-    webviewPanel.webview.html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-          <meta charset="UTF-8">
-          <title>Restoring...</title>
-      </head>
-      <body>
-          <p>Restoring webview...</p>
-      </body>
-      </html>
-    `;
+      if (!documentId || !mode || !documentUri) {
+        console.warn('[WebviewSerializer] Invalid state data, cannot restore webview');
+        webviewPanel.dispose();
+        return;
+      }
+
+      // Recreate the URI from the state
+      const uri = vscode.Uri.parse(documentUri);
+
+      // Generate a new panel ID for the restored webview
+      const panelId = this.webviewProvider['generatePanelId']();
+
+      // Create restored webview state
+      const restoredState: WebviewState = {
+        documentId,
+        mode: mode as EditorMode,
+        content: content || '',
+        isDirty: isDirty || false,
+        lastModified: lastModified ? new Date(lastModified) : new Date(),
+      };
+
+      // Create panel info for the restored webview
+      const panelInfo: WebviewPanelInfo = {
+        id: panelId,
+        title: webviewPanel.title,
+        documentId,
+        mode: mode as EditorMode,
+        panel: webviewPanel,
+        state: restoredState,
+        isActive: webviewPanel.active,
+        isVisible: webviewPanel.visible,
+      };
+
+      // Set webview options
+      webviewPanel.webview.options = this.webviewProvider['getWebviewOptions']();
+
+      // Load webview content based on mode
+      webviewPanel.webview.html = await this.webviewProvider['getWebviewContent'](mode as EditorMode);
+
+      // Set up message handling for the restored webview
+      const messageDisposable = webviewPanel.webview.onDidReceiveMessage((message: WebviewMessage) =>
+        this.webviewProvider.handleWebviewMessage(message, panelId)
+      );
+
+      // Set up panel event handlers
+      const disposeDisposable = webviewPanel.onDidDispose(() => {
+        this.webviewProvider['panels'].delete(panelId);
+        messageDisposable.dispose();
+        disposeDisposable.dispose();
+        changeDisposable.dispose();
+      });
+
+      const changeDisposable = webviewPanel.onDidChangeViewState(() => {
+        if (this.webviewProvider['panels'].has(panelId)) {
+          const info = this.webviewProvider['panels'].get(panelId)!;
+          info.isActive = webviewPanel.active;
+          info.isVisible = webviewPanel.visible;
+        }
+      });
+
+      // Store the restored panel info
+      this.webviewProvider['panels'].set(panelId, panelInfo);
+
+      // Register disposables
+      this.webviewProvider['disposables'].push(messageDisposable, disposeDisposable, changeDisposable);
+
+      // Send restored content to webview once it's ready
+      setTimeout(() => {
+        webviewPanel.webview.postMessage({
+          type: 'setContent',
+          payload: { content: restoredState.content },
+        });
+      }, 100);
+
+      console.log(`[WebviewSerializer] Successfully restored ${mode} webview for document ${documentId}`);
+
+    } catch (error) {
+      console.error('[WebviewSerializer] Error restoring webview panel:', error);
+      
+      // Provide fallback content if restoration fails
+      webviewPanel.webview.html = this.webviewProvider['getErrorContent'](
+        'Failed to restore webview. Please reopen the document.'
+      );
+    }
   }
 }
