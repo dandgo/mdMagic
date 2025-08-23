@@ -49,7 +49,7 @@ export class DocumentManager implements IDocumentManager {
 
     try {
       this.logInfo('Initializing Document Manager...');
-      
+
       // Set up document change listeners for VS Code workspace
       const textDocumentChangeDisposable = vscode.workspace.onDidChangeTextDocument(
         this.handleTextDocumentChange.bind(this)
@@ -92,21 +92,21 @@ export class DocumentManager implements IDocumentManager {
 
       // Read file content
       const content = await this.readFileContent(uri);
-      
+
       // Create document instance
       const document = new MarkdownDocument(uri, content);
-      
+
       // Store document
       this.documents.set(uri.toString(), document);
-      
+
       // Set up file watching
       this.watchDocument(document);
-      
+
       // Notify listeners
       this.notifyChangeListeners({
         document,
         type: 'content',
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       this.logInfo(`Document opened successfully: ${uri.fsPath}`);
@@ -126,7 +126,7 @@ export class DocumentManager implements IDocumentManager {
 
       const uriString = uri.toString();
       const document = this.documents.get(uriString);
-      
+
       if (!document) {
         this.logWarning(`Document not found for closing: ${uri.fsPath}`);
         return;
@@ -177,7 +177,7 @@ export class DocumentManager implements IDocumentManager {
       this.notifyChangeListeners({
         document,
         type: 'state',
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       this.logInfo(`Document saved successfully: ${uri.fsPath}`);
@@ -195,7 +195,7 @@ export class DocumentManager implements IDocumentManager {
       this.logInfo('Saving all dirty documents...');
 
       const savePromises: Promise<void>[] = [];
-      
+
       for (const document of this.documents.values()) {
         if (document.isDirty) {
           savePromises.push(this.saveDocument(document.uri));
@@ -236,7 +236,7 @@ export class DocumentManager implements IDocumentManager {
    */
   public addChangeListener(listener: DocumentChangeListener): vscode.Disposable {
     this.changeListeners.push(listener);
-    
+
     return new vscode.Disposable(() => {
       const index = this.changeListeners.indexOf(listener);
       if (index >= 0) {
@@ -259,7 +259,7 @@ export class DocumentManager implements IDocumentManager {
 
       // Read latest content from disk
       const content = await this.readFileContent(uri);
-      
+
       // Update document content
       document.updateContent(content);
       document.markClean(); // Fresh from disk, so it's clean
@@ -268,7 +268,7 @@ export class DocumentManager implements IDocumentManager {
       this.notifyChangeListeners({
         document,
         type: 'external',
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       this.logInfo(`Document refreshed successfully: ${uri.fsPath}`);
@@ -313,9 +313,7 @@ export class DocumentManager implements IDocumentManager {
    */
   private watchDocument(document: MarkdownDocument): void {
     try {
-      const watcher = vscode.workspace.createFileSystemWatcher(
-        document.uri.fsPath
-      );
+      const watcher = vscode.workspace.createFileSystemWatcher(document.uri.fsPath);
 
       // Handle file changes
       watcher.onDidChange(() => this.handleDocumentChange(document));
@@ -354,7 +352,9 @@ export class DocumentManager implements IDocumentManager {
             break;
           case 'Compare':
             // Open diff view (placeholder for now)
-            vscode.window.showInformationMessage('Compare functionality will be implemented in a future update');
+            vscode.window.showInformationMessage(
+              'Compare functionality will be implemented in a future update'
+            );
             break;
         }
       } else {
@@ -372,12 +372,12 @@ export class DocumentManager implements IDocumentManager {
   private async handleDocumentDelete(document: MarkdownDocument): Promise<void> {
     try {
       this.logWarning(`Document deleted externally: ${document.uri.fsPath}`);
-      
+
       // Show notification to user
       vscode.window.showWarningMessage(
         `The file "${document.uri.fsPath}" has been deleted from disk.`
       );
-      
+
       // Close the document
       await this.closeDocument(document.uri);
     } catch (error) {
@@ -399,12 +399,12 @@ export class DocumentManager implements IDocumentManager {
       const newContent = event.document.getText();
       if (document.content !== newContent) {
         document.updateContent(newContent);
-        
+
         // Notify listeners
         this.notifyChangeListeners({
           document,
           type: 'content',
-          timestamp: new Date()
+          timestamp: new Date(),
         });
       }
     }
@@ -421,12 +421,12 @@ export class DocumentManager implements IDocumentManager {
     const document = this.getDocument(event.uri);
     if (document) {
       document.markClean();
-      
+
       // Notify listeners
       this.notifyChangeListeners({
         document,
         type: 'state',
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     }
   }
@@ -440,7 +440,7 @@ export class DocumentManager implements IDocumentManager {
     }
 
     // Close our document if it exists
-    this.closeDocument(event.uri).catch(error => {
+    this.closeDocument(event.uri).catch((error) => {
       this.logError(`Failed to close document: ${event.uri.fsPath}`, error);
     });
   }
@@ -494,7 +494,7 @@ export class DocumentManager implements IDocumentManager {
   private logError(message: string, error?: unknown): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[mdMagic DocumentManager Error] ${message}: ${errorMessage}`);
-    
+
     if (error instanceof Error && error.stack) {
       console.error(`[mdMagic DocumentManager Error Stack] ${error.stack}`);
     }

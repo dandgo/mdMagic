@@ -35,10 +35,16 @@ export type ConfigurationChangeListener = (event: ConfigurationChangeEvent) => v
 export interface IConfigManager extends Component {
   getConfiguration(): ExtensionConfiguration;
   getConfigurationValue<K extends keyof ExtensionConfiguration>(key: K): ExtensionConfiguration[K];
-  updateConfiguration<K extends keyof ExtensionConfiguration>(key: K, value: ExtensionConfiguration[K]): Promise<void>;
+  updateConfiguration<K extends keyof ExtensionConfiguration>(
+    key: K,
+    value: ExtensionConfiguration[K]
+  ): Promise<void>;
   resetConfiguration(): Promise<void>;
   addChangeListener(listener: ConfigurationChangeListener): vscode.Disposable;
-  validateConfiguration(config: Partial<ExtensionConfiguration>): { isValid: boolean; errors: string[] };
+  validateConfiguration(config: Partial<ExtensionConfiguration>): {
+    isValid: boolean;
+    errors: string[];
+  };
 }
 
 export class ConfigManager implements IConfigManager {
@@ -65,8 +71,8 @@ export class ConfigManager implements IConfigManager {
       toggleMode: 'Ctrl+Shift+M',
       save: 'Ctrl+S',
       export: 'Ctrl+Shift+E',
-      togglePreview: 'Ctrl+Shift+V'
-    }
+      togglePreview: 'Ctrl+Shift+V',
+    },
   };
 
   constructor(private context: vscode.ExtensionContext) {
@@ -83,13 +89,13 @@ export class ConfigManager implements IConfigManager {
 
     try {
       this.logInfo('Initializing Configuration Manager...');
-      
+
       // Perform configuration migration if needed
       await this.migrateConfiguration();
-      
+
       // Load current configuration
       await this.loadConfiguration();
-      
+
       // Set up configuration change listener
       const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(
         this.handleConfigurationChange.bind(this)
@@ -109,10 +115,10 @@ export class ConfigManager implements IConfigManager {
    */
   public dispose(): void {
     this.logInfo('Disposing Configuration Manager...');
-    
+
     this.changeListeners = [];
-    
-    this.disposables.forEach(disposable => {
+
+    this.disposables.forEach((disposable) => {
       try {
         disposable.dispose();
       } catch (error) {
@@ -120,7 +126,7 @@ export class ConfigManager implements IConfigManager {
       }
     });
     this.disposables = [];
-    
+
     this.isInitialized = false;
     this.logInfo('Configuration Manager disposed successfully');
   }
@@ -135,7 +141,9 @@ export class ConfigManager implements IConfigManager {
   /**
    * Get a specific configuration value
    */
-  public getConfigurationValue<K extends keyof ExtensionConfiguration>(key: K): ExtensionConfiguration[K] {
+  public getConfigurationValue<K extends keyof ExtensionConfiguration>(
+    key: K
+  ): ExtensionConfiguration[K] {
     return this.currentConfiguration[key];
   }
 
@@ -143,7 +151,7 @@ export class ConfigManager implements IConfigManager {
    * Update a configuration value
    */
   public async updateConfiguration<K extends keyof ExtensionConfiguration>(
-    key: K, 
+    key: K,
     value: ExtensionConfiguration[K]
   ): Promise<void> {
     try {
@@ -163,12 +171,14 @@ export class ConfigManager implements IConfigManager {
     try {
       this.logInfo('Resetting configuration to defaults...');
       const config = vscode.workspace.getConfiguration(ConfigManager.EXTENSION_NAMESPACE);
-      
+
       // Reset each configuration key
-      for (const key of Object.keys(this.defaultConfiguration) as Array<keyof ExtensionConfiguration>) {
+      for (const key of Object.keys(this.defaultConfiguration) as Array<
+        keyof ExtensionConfiguration
+      >) {
         await config.update(key, undefined, vscode.ConfigurationTarget.Global);
       }
-      
+
       // Reload configuration
       await this.loadConfiguration();
       this.logInfo('Configuration reset to defaults successfully');
@@ -183,7 +193,7 @@ export class ConfigManager implements IConfigManager {
    */
   public addChangeListener(listener: ConfigurationChangeListener): vscode.Disposable {
     this.changeListeners.push(listener);
-    
+
     return new vscode.Disposable(() => {
       const index = this.changeListeners.indexOf(listener);
       if (index !== -1) {
@@ -195,7 +205,10 @@ export class ConfigManager implements IConfigManager {
   /**
    * Validate configuration values
    */
-  public validateConfiguration(config: Partial<ExtensionConfiguration>): { isValid: boolean; errors: string[] } {
+  public validateConfiguration(config: Partial<ExtensionConfiguration>): {
+    isValid: boolean;
+    errors: string[];
+  } {
     const errors: string[] = [];
 
     // Validate defaultMode
@@ -232,9 +245,12 @@ export class ConfigManager implements IConfigManager {
       } else {
         const shortcuts = config.keyboardShortcuts;
         const requiredKeys = ['toggleMode', 'save', 'export', 'togglePreview'];
-        
+
         for (const key of requiredKeys) {
-          if (!(key in shortcuts) || typeof shortcuts[key as keyof KeyboardShortcuts] !== 'string') {
+          if (
+            !(key in shortcuts) ||
+            typeof shortcuts[key as keyof KeyboardShortcuts] !== 'string'
+          ) {
             errors.push(`keyboardShortcuts.${key} must be a string`);
           }
         }
@@ -243,7 +259,7 @@ export class ConfigManager implements IConfigManager {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -253,7 +269,7 @@ export class ConfigManager implements IConfigManager {
   private async loadConfiguration(): Promise<void> {
     try {
       const config = vscode.workspace.getConfiguration(ConfigManager.EXTENSION_NAMESPACE);
-      
+
       // Build configuration with defaults for missing values
       const loadedConfig: ExtensionConfiguration = {
         defaultMode: config.get('defaultMode') ?? this.defaultConfiguration.defaultMode,
@@ -263,8 +279,8 @@ export class ConfigManager implements IConfigManager {
         showToolbar: config.get('showToolbar') ?? this.defaultConfiguration.showToolbar,
         keyboardShortcuts: {
           ...this.defaultConfiguration.keyboardShortcuts,
-          ...(config.get('keyboardShortcuts') ?? {})
-        }
+          ...(config.get('keyboardShortcuts') ?? {}),
+        },
       };
 
       // Validate loaded configuration
@@ -297,16 +313,18 @@ export class ConfigManager implements IConfigManager {
       await this.loadConfiguration();
 
       // Notify listeners of changes
-      for (const key of Object.keys(this.currentConfiguration) as Array<keyof ExtensionConfiguration>) {
+      for (const key of Object.keys(this.currentConfiguration) as Array<
+        keyof ExtensionConfiguration
+      >) {
         const oldValue = oldConfiguration[key];
         const newValue = this.currentConfiguration[key];
-        
+
         if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
           const event: ConfigurationChangeEvent = {
             key: String(key),
             oldValue,
             newValue,
-            timestamp: new Date()
+            timestamp: new Date(),
           };
 
           this.notifyChangeListeners(event);
@@ -321,7 +339,7 @@ export class ConfigManager implements IConfigManager {
    * Notify configuration change listeners
    */
   private notifyChangeListeners(event: ConfigurationChangeEvent): void {
-    this.changeListeners.forEach(listener => {
+    this.changeListeners.forEach((listener) => {
       try {
         listener(event);
       } catch (error) {
@@ -336,21 +354,29 @@ export class ConfigManager implements IConfigManager {
   private async migrateConfiguration(): Promise<void> {
     try {
       const storedVersion = this.context.globalState.get<string>(ConfigManager.CONFIG_VERSION_KEY);
-      
+
       if (!storedVersion) {
         // First time setup
-        await this.context.globalState.update(ConfigManager.CONFIG_VERSION_KEY, ConfigManager.CURRENT_VERSION);
+        await this.context.globalState.update(
+          ConfigManager.CONFIG_VERSION_KEY,
+          ConfigManager.CURRENT_VERSION
+        );
         this.logInfo('Configuration initialized for first time');
         return;
       }
 
       if (storedVersion !== ConfigManager.CURRENT_VERSION) {
-        this.logInfo(`Migrating configuration from version ${storedVersion} to ${ConfigManager.CURRENT_VERSION}`);
-        
+        this.logInfo(
+          `Migrating configuration from version ${storedVersion} to ${ConfigManager.CURRENT_VERSION}`
+        );
+
         // Add migration logic here for future versions
         // For now, just update the version
-        await this.context.globalState.update(ConfigManager.CONFIG_VERSION_KEY, ConfigManager.CURRENT_VERSION);
-        
+        await this.context.globalState.update(
+          ConfigManager.CONFIG_VERSION_KEY,
+          ConfigManager.CURRENT_VERSION
+        );
+
         this.logInfo('Configuration migration completed');
       }
     } catch (error) {
@@ -378,7 +404,7 @@ export class ConfigManager implements IConfigManager {
    */
   private logError(message: string, error?: unknown): void {
     console.error(`[mdMagic ConfigManager Error] ${message}`);
-    
+
     if (error instanceof Error && error.stack) {
       console.error(`[mdMagic ConfigManager Error Stack] ${error.stack}`);
     }

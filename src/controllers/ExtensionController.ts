@@ -40,11 +40,11 @@ export class ExtensionController {
 
     try {
       this.logInfo('Initializing mdMagic extension controller...');
-      
+
       await this.registerComponents();
       this.registerCommands();
       this.setupEventListeners();
-      
+
       this.isInitialized = true;
       this.logInfo('mdMagic extension controller initialized successfully');
     } catch (error) {
@@ -59,17 +59,22 @@ export class ExtensionController {
    */
   private async registerComponents(): Promise<void> {
     this.logInfo('Registering components...');
-    
+
     // Register ConfigManager first (other components may depend on configuration)
     const { ConfigManager } = require('../managers/ConfigManager');
     const configManager = new ConfigManager(this.context);
     await this.registerComponent(configManager);
-    
+
     // Register DocumentManager
     const { DocumentManager } = require('../managers/DocumentManager');
     const documentManager = new DocumentManager(this.context);
     await this.registerComponent(documentManager);
-    
+
+    // Register WebviewProvider
+    const { WebviewProvider } = require('../providers/WebviewProvider');
+    const webviewProvider = new WebviewProvider(this.context);
+    await this.registerComponent(webviewProvider);
+
     this.logInfo('Component registration complete');
   }
 
@@ -97,15 +102,54 @@ export class ExtensionController {
    */
   private registerCommands(): void {
     this.logInfo('Registering commands...');
-    
-    // TODO: Register actual commands when they are implemented
-    // Example:
-    // const disposable = vscode.commands.registerCommand('mdMagic.openViewer', () => {
-    //   // Command implementation
-    // });
-    // this.disposables.push(disposable);
-    // this.context.subscriptions.push(disposable);
-    
+
+    // Command to open markdown in editor mode
+    const openEditorCommand = vscode.commands.registerCommand(
+      'mdMagic.openEditor',
+      async (uri?: vscode.Uri) => {
+        try {
+          const targetUri = uri || vscode.window.activeTextEditor?.document?.uri;
+          if (!targetUri) {
+            vscode.window.showErrorMessage('No markdown file selected');
+            return;
+          }
+
+          const webviewProvider = this.getComponent('webviewProvider') as any;
+          if (webviewProvider) {
+            const document = await vscode.workspace.openTextDocument(targetUri);
+            await webviewProvider.createEditorWebview(targetUri, document.getText());
+          }
+        } catch (error) {
+          this.handleError(error, 'Failed to open editor');
+        }
+      }
+    );
+
+    // Command to open markdown in viewer mode
+    const openViewerCommand = vscode.commands.registerCommand(
+      'mdMagic.openViewer',
+      async (uri?: vscode.Uri) => {
+        try {
+          const targetUri = uri || vscode.window.activeTextEditor?.document?.uri;
+          if (!targetUri) {
+            vscode.window.showErrorMessage('No markdown file selected');
+            return;
+          }
+
+          const webviewProvider = this.getComponent('webviewProvider') as any;
+          if (webviewProvider) {
+            const document = await vscode.workspace.openTextDocument(targetUri);
+            await webviewProvider.createViewerWebview(targetUri, document.getText());
+          }
+        } catch (error) {
+          this.handleError(error, 'Failed to open viewer');
+        }
+      }
+    );
+
+    this.disposables.push(openEditorCommand, openViewerCommand);
+    this.context.subscriptions.push(openEditorCommand, openViewerCommand);
+
     this.logInfo('Command registration complete');
   }
 
@@ -114,7 +158,7 @@ export class ExtensionController {
    */
   private setupEventListeners(): void {
     this.logInfo('Setting up event listeners...');
-    
+
     // Listen for configuration changes
     const configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('mdMagic')) {
@@ -122,10 +166,10 @@ export class ExtensionController {
         // TODO: Handle configuration changes
       }
     });
-    
+
     this.disposables.push(configDisposable);
     this.context.subscriptions.push(configDisposable);
-    
+
     this.logInfo('Event listeners setup complete');
   }
 
@@ -163,7 +207,7 @@ export class ExtensionController {
   public dispose(): void {
     try {
       this.logInfo('Disposing mdMagic extension controller...');
-      
+
       // Dispose all components
       for (const [id, component] of this.components) {
         try {
@@ -174,7 +218,7 @@ export class ExtensionController {
         }
       }
       this.components.clear();
-      
+
       // Dispose all registered disposables
       for (const disposable of this.disposables) {
         try {
@@ -184,10 +228,10 @@ export class ExtensionController {
         }
       }
       this.disposables = [];
-      
+
       this.isInitialized = false;
       ExtensionController.instance = undefined;
-      
+
       this.logInfo('mdMagic extension controller disposed successfully');
     } catch (error) {
       this.handleError(error, 'Failed to dispose extension controller');
@@ -200,13 +244,13 @@ export class ExtensionController {
   private handleError(error: unknown, context?: string): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const fullMessage = context ? `${context}: ${errorMessage}` : errorMessage;
-    
+
     console.error(`[mdMagic Error] ${fullMessage}`);
-    
+
     if (error instanceof Error && error.stack) {
       console.error(`[mdMagic Error Stack] ${error.stack}`);
     }
-    
+
     // Show error to user for critical failures
     if (context?.includes('Failed to initialize')) {
       vscode.window.showErrorMessage(`mdMagic: ${fullMessage}`);

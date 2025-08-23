@@ -9,6 +9,8 @@ const mockVscode = {
     showInformationMessage: jest.fn(),
     showErrorMessage: jest.fn(),
     showWarningMessage: jest.fn(),
+    createWebviewPanel: jest.fn(),
+    registerWebviewPanelSerializer: jest.fn(() => ({ dispose: jest.fn() })),
   },
   commands: {
     registerCommand: jest.fn(),
@@ -28,7 +30,7 @@ const mockVscode = {
     })),
     getConfiguration: jest.fn(() => ({
       get: jest.fn(),
-      update: jest.fn()
+      update: jest.fn(),
     })),
     fs: {
       readFile: jest.fn(),
@@ -42,7 +44,10 @@ const mockVscode = {
   },
   Disposable: jest.fn(),
   FileSystemError: class extends Error {
-    constructor(message: string, public code: string) {
+    constructor(
+      message: string,
+      public code: string
+    ) {
       super(message);
     }
   },
@@ -50,9 +55,6 @@ const mockVscode = {
     file: jest.fn((path: string) => ({ toString: () => path, fsPath: path })),
   },
 };
-
-// Mock VS Code module
-jest.mock('vscode', () => mockVscode, { virtual: true });
 
 import * as extension from '../extension';
 import { ExtensionController } from '../controllers/ExtensionController';
@@ -65,11 +67,11 @@ describe('mdMagic Extension', () => {
       subscriptions: [],
       globalState: {
         get: jest.fn(),
-        update: jest.fn().mockResolvedValue(undefined)
-      }
+        update: jest.fn().mockResolvedValue(undefined),
+      },
     };
     jest.clearAllMocks();
-    
+
     // Reset singleton instance
     (ExtensionController as any).instance = undefined;
   });
@@ -113,12 +115,12 @@ describe('mdMagic Extension', () => {
       await extension.activate(mockContext);
       let controller = ExtensionController.getInstance();
       expect(controller).toBeDefined();
-      
+
       const disposeSpy = jest.spyOn(controller!, 'dispose');
-      
+
       // Then deactivate
       extension.deactivate();
-      
+
       expect(disposeSpy).toHaveBeenCalled();
       controller = ExtensionController.getInstance();
       expect(controller).toBeUndefined();
