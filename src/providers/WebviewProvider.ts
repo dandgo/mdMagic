@@ -189,6 +189,10 @@ export class WebviewProvider implements Component {
     // Dispose all panels
     for (const [panelId, panelInfo] of this.panels) {
       try {
+        // Clear any pending timeouts
+        if (panelInfo.timeoutId) {
+          clearTimeout(panelInfo.timeoutId);
+        }
         panelInfo.panel.dispose();
       } catch (error) {
         console.error(`[WebviewProvider] Error disposing panel ${panelId}:`, error);
@@ -262,6 +266,10 @@ export class WebviewProvider implements Component {
 
     // Set up panel event handlers
     const disposeDisposable = panel.onDidDispose(() => {
+      const panelInfo = this.panels.get(panelId);
+      if (panelInfo?.timeoutId) {
+        clearTimeout(panelInfo.timeoutId);
+      }
       this.panels.delete(panelId);
       messageDisposable.dispose();
       disposeDisposable.dispose();
@@ -283,7 +291,7 @@ export class WebviewProvider implements Component {
     this.disposables.push(messageDisposable, disposeDisposable, changeDisposable);
 
     // Send initial content once webview is ready
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       console.log(
         `[WebviewProvider] Sending initial content to webview: ${content.substring(0, 100)}...`
       );
@@ -292,6 +300,9 @@ export class WebviewProvider implements Component {
         payload: { content },
       });
     }, 100);
+
+    // Store timeout ID for cleanup
+    panelInfo.timeoutId = timeoutId;
 
     console.log(
       `[WebviewProvider] Created ${mode} webview for ${path.basename(documentUri.fsPath)}`

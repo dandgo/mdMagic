@@ -51,4 +51,5 @@ export interface WebviewPanelInfo {
   state: WebviewState;
   isActive: boolean;
   isVisible: boolean;
+  timeoutId?: NodeJS.Timeout; // For cleaning up async operations
 }

@@ -11,6 +11,19 @@ const mockVscode = {
     showWarningMessage: jest.fn(),
     createWebviewPanel: jest.fn(),
     registerWebviewPanelSerializer: jest.fn(() => ({ dispose: jest.fn() })),
+    createStatusBarItem: jest.fn(() => ({
+      text: '',
+      tooltip: '',
+      command: '',
+      show: jest.fn(),
+      hide: jest.fn(),
+      dispose: jest.fn(),
+    })),
+    onDidChangeActiveTextEditor: jest.fn(() => ({ dispose: jest.fn() })),
+  },
+  StatusBarAlignment: {
+    Left: 1,
+    Right: 2,
   },
   commands: {
     registerCommand: jest.fn(),
@@ -55,6 +68,9 @@ const mockVscode = {
     file: jest.fn((path: string) => ({ toString: () => path, fsPath: path })),
   },
 };
+
+// Mock the vscode module
+jest.mock('vscode', () => mockVscode, { virtual: true });
 
 import * as extension from '../extension';
 import { ExtensionController } from '../controllers/ExtensionController';

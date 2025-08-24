@@ -25,8 +25,10 @@ describe('WebviewProvider', () => {
     jest.clearAllMocks();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     webviewProvider.dispose();
+    // Wait for any pending async operations to complete
+    await new Promise(resolve => setTimeout(resolve, 150));
   });
 
   describe('initialization', () => {
@@ -101,6 +103,14 @@ describe('WebviewProvider', () => {
       panel = await webviewProvider.createEditorWebview(mockUri, 'initial content');
     });
 
+    afterEach(async () => {
+      // Clean up any created webviews
+      const panels = webviewProvider.getActivePanels();
+      panels.forEach(p => webviewProvider.disposeWebview(p.id));
+      // Wait for cleanup
+      await new Promise(resolve => setTimeout(resolve, 150));
+    });
+
     it('should update webview content', () => {
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
@@ -140,6 +150,14 @@ describe('WebviewProvider', () => {
     beforeEach(async () => {
       await webviewProvider.initialize();
       panel = await webviewProvider.createEditorWebview(mockUri, 'test content');
+    });
+
+    afterEach(async () => {
+      // Clean up any created webviews
+      const panels = webviewProvider.getActivePanels();
+      panels.forEach(p => webviewProvider.disposeWebview(p.id));
+      // Wait for cleanup
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     it('should handle webview ready message', () => {
@@ -216,6 +234,14 @@ describe('WebviewProvider', () => {
     beforeEach(async () => {
       await webviewProvider.initialize();
       panel = await webviewProvider.createEditorWebview(mockUri, 'test content');
+    });
+
+    afterEach(async () => {
+      // Clean up any created webviews
+      const panels = webviewProvider.getActivePanels();
+      panels.forEach(p => webviewProvider.disposeWebview(p.id));
+      // Wait for cleanup
+      await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     it('should get webview state', () => {
