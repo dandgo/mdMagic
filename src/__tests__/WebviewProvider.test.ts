@@ -28,7 +28,7 @@ describe('WebviewProvider', () => {
   afterEach(async () => {
     webviewProvider.dispose();
     // Wait for any pending async operations to complete
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 150));
   });
 
   describe('initialization', () => {
@@ -106,9 +106,9 @@ describe('WebviewProvider', () => {
     afterEach(async () => {
       // Clean up any created webviews
       const panels = webviewProvider.getActivePanels();
-      panels.forEach(p => webviewProvider.disposeWebview(p.id));
+      panels.forEach((p) => webviewProvider.disposeWebview(p.id));
       // Wait for cleanup
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
     });
 
     it('should update webview content', () => {
@@ -155,9 +155,9 @@ describe('WebviewProvider', () => {
     afterEach(async () => {
       // Clean up any created webviews
       const panels = webviewProvider.getActivePanels();
-      panels.forEach(p => webviewProvider.disposeWebview(p.id));
+      panels.forEach((p) => webviewProvider.disposeWebview(p.id));
       // Wait for cleanup
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
     });
 
     it('should handle webview ready message', () => {
@@ -239,9 +239,9 @@ describe('WebviewProvider', () => {
     afterEach(async () => {
       // Clean up any created webviews
       const panels = webviewProvider.getActivePanels();
-      panels.forEach(p => webviewProvider.disposeWebview(p.id));
+      panels.forEach((p) => webviewProvider.disposeWebview(p.id));
       // Wait for cleanup
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
     });
 
     it('should get webview state', () => {
