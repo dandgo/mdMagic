@@ -58,6 +58,11 @@
         "command": "mdMagic.insertLink",
         "title": "Insert Link",
         "category": "mdMagic"
+      },
+      {
+        "command": "mdMagic.showDocumentStats",
+        "title": "Show Document Statistics",
+        "category": "mdMagic"
       }
     ],
     "keybindings": [

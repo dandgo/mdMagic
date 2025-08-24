@@ -3,6 +3,8 @@
  */
 
 // Mock VS Code API first
+jest.mock('vscode');
+
 const mockVscode = {
   ExtensionContext: jest.fn(),
   window: {
@@ -11,6 +13,15 @@ const mockVscode = {
     showWarningMessage: jest.fn(),
     createWebviewPanel: jest.fn(),
     registerWebviewPanelSerializer: jest.fn(() => ({ dispose: jest.fn() })),
+    createStatusBarItem: jest.fn(() => ({
+      show: jest.fn(),
+      hide: jest.fn(),
+      dispose: jest.fn(),
+      text: '',
+      tooltip: '',
+      command: '',
+    })),
+    onDidChangeActiveTextEditor: jest.fn(() => ({ dispose: jest.fn() })),
   },
   commands: {
     registerCommand: jest.fn(),
@@ -54,7 +65,19 @@ const mockVscode = {
   Uri: {
     file: jest.fn((path: string) => ({ toString: () => path, fsPath: path })),
   },
+  StatusBarAlignment: {
+    Left: 1,
+    Right: 2,
+  },
+  env: {
+    clipboard: {
+      writeText: jest.fn(),
+    },
+  },
 };
+
+// Apply the mock to the actual vscode module
+jest.doMock('vscode', () => mockVscode);
 
 // Mock ConfigManager
 const mockConfigManager = {
