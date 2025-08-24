@@ -84,11 +84,13 @@ class MarkdownViewer {
       const level = hashes.length;
       const id = this.generateHeaderId(title);
       headers.push({ level, title, id });
+      console.log('[MarkdownViewer] Found header:', { level, title, id });
       return `<h${level} id="${id}">${title}</h${level}>`;
     });
 
     // Store headers for TOC generation
     this.currentHeaders = headers;
+    console.log('[MarkdownViewer] All headers collected:', this.currentHeaders);
 
     // Bold and Italic
     html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
@@ -298,7 +300,10 @@ class MarkdownViewer {
    * Generate table of contents from headers
    */
   generateTableOfContents(headers) {
+    console.log('[MarkdownViewer] Generating TOC with headers:', headers);
+    
     if (!headers || headers.length === 0) {
+      console.log('[MarkdownViewer] No headers found for TOC');
       return '<p class="toc-empty">No headings found</p>';
     }
 
@@ -331,6 +336,7 @@ class MarkdownViewer {
     }
     tocHtml += '</ul>';
 
+    console.log('[MarkdownViewer] Generated TOC HTML:', tocHtml);
     return tocHtml;
   }
 
@@ -380,12 +386,16 @@ class MarkdownViewer {
    */
   renderContent(markdown) {
     try {
+      console.log('[MarkdownViewer] Rendering content, length:', markdown ? markdown.length : 0);
+      
       // Reset headers
       this.currentHeaders = [];
 
       // Convert markdown to HTML
       const html = this.markdownToHtml(markdown);
       this.contentDiv.innerHTML = html;
+
+      console.log('[MarkdownViewer] Content rendered, headers found:', this.currentHeaders.length);
 
       // Generate and display table of contents
       this.updateTableOfContents();
@@ -406,6 +416,8 @@ class MarkdownViewer {
    * Update table of contents
    */
   updateTableOfContents() {
+    console.log('[MarkdownViewer] Updating TOC, container exists:', !!this.tocContainer);
+    
     if (this.tocContainer) {
       const tocHtml = this.generateTableOfContents(this.currentHeaders);
       this.tocContainer.innerHTML = `
@@ -418,17 +430,71 @@ class MarkdownViewer {
         </div>
       `;
 
-      // Setup TOC toggle
-      const toggleBtn = document.getElementById('toc-toggle');
-      const tocContent = this.tocContainer.querySelector('.toc-content');
+      console.log('[MarkdownViewer] TOC HTML updated');
+
+      // Setup TOC toggle for desktop
+      this.setupTocToggle();
       
-      if (toggleBtn && tocContent) {
-        toggleBtn.addEventListener('click', () => {
-          const isVisible = tocContent.style.display !== 'none';
-          tocContent.style.display = isVisible ? 'none' : 'block';
-          toggleBtn.textContent = isVisible ? 'Show' : 'Hide';
-        });
-      }
+      // Setup mobile TOC toggle
+      this.setupMobileTocToggle();
+    } else {
+      console.warn('[MarkdownViewer] TOC container not found');
+    }
+  }
+
+  /**
+   * Setup desktop TOC toggle functionality
+   */
+  setupTocToggle() {
+    const toggleBtn = document.getElementById('toc-toggle');
+    const tocContent = this.tocContainer.querySelector('.toc-content');
+    
+    if (toggleBtn && tocContent) {
+      toggleBtn.addEventListener('click', () => {
+        // Get computed display value instead of inline style
+        const computedStyle = window.getComputedStyle(tocContent);
+        const isVisible = computedStyle.display !== 'none' && tocContent.style.display !== 'none';
+        
+        if (isVisible) {
+          tocContent.style.display = 'none';
+          toggleBtn.textContent = 'Show';
+        } else {
+          tocContent.style.display = 'block';
+          toggleBtn.textContent = 'Hide';
+        }
+      });
+    }
+  }
+
+  /**
+   * Setup mobile TOC toggle functionality
+   */
+  setupMobileTocToggle() {
+    const mobileToggle = document.getElementById('toc-mobile-toggle');
+    
+    if (mobileToggle && this.tocContainer) {
+      mobileToggle.addEventListener('click', () => {
+        const isVisible = this.tocContainer.classList.contains('mobile-visible');
+        
+        if (isVisible) {
+          this.tocContainer.classList.remove('mobile-visible');
+          mobileToggle.textContent = '📋 TOC';
+        } else {
+          this.tocContainer.classList.add('mobile-visible');
+          mobileToggle.textContent = '✖️ Close';
+        }
+      });
+      
+      // Close TOC when clicking outside on mobile
+      document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 1200 && 
+            this.tocContainer.classList.contains('mobile-visible') &&
+            !this.tocContainer.contains(e.target) &&
+            !mobileToggle.contains(e.target)) {
+          this.tocContainer.classList.remove('mobile-visible');
+          mobileToggle.textContent = '📋 TOC';
+        }
+      });
     }
   }
 
@@ -517,9 +583,11 @@ class MarkdownViewer {
     // Handle messages from extension
     window.addEventListener('message', event => {
       const message = event.data;
+      console.log('[MarkdownViewer] Received message:', message);
 
       switch (message.type) {
         case 'setContent':
+          console.log('[MarkdownViewer] Setting content:', message.payload?.content?.substring(0, 100));
           this.renderContent(message.payload.content);
           break;
 
@@ -533,6 +601,10 @@ class MarkdownViewer {
 
         case 'executeCommand':
           // Handle command execution
+          break;
+
+        default:
+          console.warn('[MarkdownViewer] Unknown message type:', message.type);
           break;
       }
     });
@@ -598,5 +670,17 @@ class MarkdownViewer {
 
 // Initialize the viewer when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('[MarkdownViewer] DOM loaded, initializing viewer');
   new MarkdownViewer();
 });
+
+// Fallback initialization if DOM is already loaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('[MarkdownViewer] DOM loaded (event), initializing viewer');
+    new MarkdownViewer();
+  });
+} else {
+  console.log('[MarkdownViewer] DOM already loaded, initializing viewer immediately');
+  new MarkdownViewer();
+}

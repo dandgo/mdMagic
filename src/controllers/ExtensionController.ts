@@ -84,6 +84,11 @@ export class ExtensionController {
     const webviewProvider = new WebviewProvider(this.context);
     await this.registerComponent(webviewProvider);
 
+    // Register StatusBarManager
+    const { StatusBarManager } = require('../managers/StatusBarManager');
+    const statusBarManager = new StatusBarManager(this.context);
+    await this.registerComponent(statusBarManager);
+
     this.logInfo('Component registration complete');
   }
 

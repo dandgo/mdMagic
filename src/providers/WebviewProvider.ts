@@ -65,7 +65,7 @@ export class WebviewProvider implements Component {
 
     // Create new webview panel
     const panel = vscode.window.createWebviewPanel(
-      mode === EditorMode.EDITOR ? 'mdMagic.editor' : 'mdMagic.viewer',
+      mode === EditorMode.Editor ? 'mdMagic.editor' : 'mdMagic.viewer',
       `mdMagic ${mode}: ${path.basename(documentUri.fsPath)}`,
       vscode.ViewColumn.One,
       this.getWebviewOptions()
@@ -84,7 +84,7 @@ export class WebviewProvider implements Component {
     documentUri: vscode.Uri,
     content: string = ''
   ): Promise<vscode.WebviewPanel> {
-    return this.createWebview(documentUri, EditorMode.EDITOR, content);
+    return this.createWebview(documentUri, EditorMode.Editor, content);
   }
 
   /**
@@ -94,7 +94,7 @@ export class WebviewProvider implements Component {
     documentUri: vscode.Uri,
     content: string = ''
   ): Promise<vscode.WebviewPanel> {
-    return this.createWebview(documentUri, EditorMode.VIEWER, content);
+    return this.createWebview(documentUri, EditorMode.Viewer, content);
   }
 
   /**
@@ -174,7 +174,7 @@ export class WebviewProvider implements Component {
 
       // Send restored content to webview
       panelInfo.panel.webview.postMessage({
-        type: 'setContent',
+        type: MessageType.SET_CONTENT,
         payload: { content: state.content },
       });
     }
@@ -189,6 +189,10 @@ export class WebviewProvider implements Component {
     // Dispose all panels
     for (const [panelId, panelInfo] of this.panels) {
       try {
+        // Clear any pending timeouts
+        if (panelInfo.timeoutId) {
+          clearTimeout(panelInfo.timeoutId);
+        }
         panelInfo.panel.dispose();
       } catch (error) {
         console.error(`[WebviewProvider] Error disposing panel ${panelId}:`, error);
@@ -262,6 +266,10 @@ export class WebviewProvider implements Component {
 
     // Set up panel event handlers
     const disposeDisposable = panel.onDidDispose(() => {
+      const panelInfo = this.panels.get(panelId);
+      if (panelInfo?.timeoutId) {
+        clearTimeout(panelInfo.timeoutId);
+      }
       this.panels.delete(panelId);
       messageDisposable.dispose();
       disposeDisposable.dispose();
@@ -283,12 +291,18 @@ export class WebviewProvider implements Component {
     this.disposables.push(messageDisposable, disposeDisposable, changeDisposable);
 
     // Send initial content once webview is ready
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
+      console.log(
+        `[WebviewProvider] Sending initial content to webview: ${content.substring(0, 100)}...`
+      );
       panel.webview.postMessage({
-        type: 'setContent',
+        type: MessageType.SET_CONTENT,
         payload: { content },
       });
     }, 100);
+
+    // Store timeout ID for cleanup
+    panelInfo.timeoutId = timeoutId;
 
     console.log(
       `[WebviewProvider] Created ${mode} webview for ${path.basename(documentUri.fsPath)}`
@@ -420,12 +434,19 @@ export class WebviewProvider implements Component {
     console.log(`[WebviewProvider] Webview ${panelId} is ready`);
 
     const panelInfo = this.panels.get(panelId);
-    if (panelInfo && panelInfo.state.content) {
+    if (panelInfo) {
+      const content = panelInfo.state.content;
+      console.log(
+        `[WebviewProvider] Sending content to ready webview: ${content.substring(0, 100)}...`
+      );
+
       // Send initial content
       panelInfo.panel.webview.postMessage({
-        type: 'setContent',
-        payload: { content: panelInfo.state.content },
+        type: MessageType.SET_CONTENT,
+        payload: { content },
       });
+    } else {
+      console.warn(`[WebviewProvider] Panel ${panelId} not found when ready`);
     }
   }
 
@@ -574,7 +595,7 @@ class WebviewSerializer implements vscode.WebviewPanelSerializer {
       // Send restored content to webview once it's ready
       setTimeout(() => {
         webviewPanel.webview.postMessage({
-          type: 'setContent',
+          type: MessageType.SET_CONTENT,
           payload: { content: restoredState.content },
         });
       }, 100);

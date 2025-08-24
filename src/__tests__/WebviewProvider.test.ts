@@ -25,8 +25,10 @@ describe('WebviewProvider', () => {
     jest.clearAllMocks();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     webviewProvider.dispose();
+    // Wait for any pending async operations to complete
+    await new Promise((resolve) => setTimeout(resolve, 150));
   });
 
   describe('initialization', () => {
@@ -88,7 +90,7 @@ describe('WebviewProvider', () => {
       const panels = webviewProvider.getActivePanels();
 
       expect(panels).toHaveLength(1);
-      expect(panels[0].mode).toBe(EditorMode.EDITOR);
+      expect(panels[0].mode).toBe(EditorMode.Editor);
       expect(panels[0].documentId).toContain('doc_');
     });
   });
@@ -99,6 +101,14 @@ describe('WebviewProvider', () => {
     beforeEach(async () => {
       await webviewProvider.initialize();
       panel = await webviewProvider.createEditorWebview(mockUri, 'initial content');
+    });
+
+    afterEach(async () => {
+      // Clean up any created webviews
+      const panels = webviewProvider.getActivePanels();
+      panels.forEach((p) => webviewProvider.disposeWebview(p.id));
+      // Wait for cleanup
+      await new Promise((resolve) => setTimeout(resolve, 150));
     });
 
     it('should update webview content', () => {
@@ -140,6 +150,14 @@ describe('WebviewProvider', () => {
     beforeEach(async () => {
       await webviewProvider.initialize();
       panel = await webviewProvider.createEditorWebview(mockUri, 'test content');
+    });
+
+    afterEach(async () => {
+      // Clean up any created webviews
+      const panels = webviewProvider.getActivePanels();
+      panels.forEach((p) => webviewProvider.disposeWebview(p.id));
+      // Wait for cleanup
+      await new Promise((resolve) => setTimeout(resolve, 150));
     });
 
     it('should handle webview ready message', () => {
@@ -218,6 +236,14 @@ describe('WebviewProvider', () => {
       panel = await webviewProvider.createEditorWebview(mockUri, 'test content');
     });
 
+    afterEach(async () => {
+      // Clean up any created webviews
+      const panels = webviewProvider.getActivePanels();
+      panels.forEach((p) => webviewProvider.disposeWebview(p.id));
+      // Wait for cleanup
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    });
+
     it('should get webview state', () => {
       const panels = webviewProvider.getActivePanels();
       const panelId = panels[0].id;
@@ -226,7 +252,7 @@ describe('WebviewProvider', () => {
 
       expect(state).toBeDefined();
       expect(state?.content).toBe('test content');
-      expect(state?.mode).toBe(EditorMode.EDITOR);
+      expect(state?.mode).toBe(EditorMode.Editor);
     });
 
     it('should restore webview state', () => {
@@ -235,7 +261,7 @@ describe('WebviewProvider', () => {
 
       const newState = {
         documentId: 'test',
-        mode: EditorMode.EDITOR,
+        mode: EditorMode.Editor,
         content: 'restored content',
         isDirty: false,
         lastModified: new Date(),
@@ -260,7 +286,7 @@ describe('WebviewProvider', () => {
       const state = (panel as any).getState();
       expect(state).toBeDefined();
       expect(state.documentId).toBeDefined();
-      expect(state.mode).toBe(EditorMode.EDITOR);
+      expect(state.mode).toBe(EditorMode.Editor);
       expect(state.content).toBe('test content');
       expect(state.documentUri).toBeDefined();
       expect(typeof state.lastModified).toBe('string'); // Should be ISO string
