@@ -42,7 +42,6 @@ export class ExtensionController {
       this.logInfo('Initializing mdMagic extension controller...');
 
       await this.registerComponents();
-      this.registerCommands();
       this.setupEventListeners();
 
       this.isInitialized = true;
@@ -75,6 +74,11 @@ export class ExtensionController {
     const modeManager = new ModeManager(this.context, documentManager, configManager);
     await this.registerComponent(modeManager);
 
+    // Register CommandManager (depends on other managers for command execution)
+    const { CommandManager } = require('../managers/CommandManager');
+    const commandManager = new CommandManager(this.context);
+    await this.registerComponent(commandManager);
+
     // Register WebviewProvider
     const { WebviewProvider } = require('../providers/WebviewProvider');
     const webviewProvider = new WebviewProvider(this.context);
@@ -100,62 +104,6 @@ export class ExtensionController {
       this.handleError(error, `Failed to register component ${component.name}`);
       throw error;
     }
-  }
-
-  /**
-   * Register VS Code commands
-   */
-  private registerCommands(): void {
-    this.logInfo('Registering commands...');
-
-    // Command to open markdown in editor mode
-    const openEditorCommand = vscode.commands.registerCommand(
-      'mdMagic.openEditor',
-      async (uri?: vscode.Uri) => {
-        try {
-          const targetUri = uri || vscode.window.activeTextEditor?.document?.uri;
-          if (!targetUri) {
-            vscode.window.showErrorMessage('No markdown file selected');
-            return;
-          }
-
-          const webviewProvider = this.getComponent('webviewProvider') as any;
-          if (webviewProvider) {
-            const document = await vscode.workspace.openTextDocument(targetUri);
-            await webviewProvider.createEditorWebview(targetUri, document.getText());
-          }
-        } catch (error) {
-          this.handleError(error, 'Failed to open editor');
-        }
-      }
-    );
-
-    // Command to open markdown in viewer mode
-    const openViewerCommand = vscode.commands.registerCommand(
-      'mdMagic.openViewer',
-      async (uri?: vscode.Uri) => {
-        try {
-          const targetUri = uri || vscode.window.activeTextEditor?.document?.uri;
-          if (!targetUri) {
-            vscode.window.showErrorMessage('No markdown file selected');
-            return;
-          }
-
-          const webviewProvider = this.getComponent('webviewProvider') as any;
-          if (webviewProvider) {
-            const document = await vscode.workspace.openTextDocument(targetUri);
-            await webviewProvider.createViewerWebview(targetUri, document.getText());
-          }
-        } catch (error) {
-          this.handleError(error, 'Failed to open viewer');
-        }
-      }
-    );
-
-    this.disposables.push(openEditorCommand, openViewerCommand);
-    this.context.subscriptions.push(openEditorCommand, openViewerCommand);
-
-    this.logInfo('Command registration complete');
   }
 
   /**
