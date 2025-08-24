@@ -86,7 +86,8 @@ export class CommandManager implements ICommandManager {
           if (modeManager) {
             const documentId = activeEditor.document.uri.toString();
             const currentMode = modeManager.getCurrentMode(documentId);
-            const targetMode = currentMode === EditorMode.Editor ? EditorMode.Viewer : EditorMode.Editor;
+            const targetMode =
+              currentMode === EditorMode.Editor ? EditorMode.Viewer : EditorMode.Editor;
             await modeManager.switchMode(documentId, targetMode);
           }
         },

@@ -34,7 +34,7 @@ export class StatusBarManager implements Component {
       vscode.StatusBarAlignment.Right,
       100
     );
-    
+
     this.statsStatusBarItem = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Right,
       99
@@ -109,9 +109,11 @@ export class StatusBarManager implements Component {
 
     // Listen for document content changes
     const documentChangeDisposable = vscode.workspace.onDidChangeTextDocument((event) => {
-      if (event.document.languageId === 'markdown' && 
-          this.currentDocument && 
-          event.document.uri.toString() === this.currentDocument.uri.toString()) {
+      if (
+        event.document.languageId === 'markdown' &&
+        this.currentDocument &&
+        event.document.uri.toString() === this.currentDocument.uri.toString()
+      ) {
         // Debounce updates to avoid excessive calculations
         this.debounceUpdateStatusBar();
       }
@@ -124,11 +126,7 @@ export class StatusBarManager implements Component {
       }
     });
 
-    this.disposables.push(
-      activeEditorDisposable,
-      documentChangeDisposable,
-      modeChangeDisposable
-    );
+    this.disposables.push(activeEditorDisposable, documentChangeDisposable, modeChangeDisposable);
 
     this.context.subscriptions.push(...this.disposables);
   }
@@ -137,9 +135,8 @@ export class StatusBarManager implements Component {
    * Register commands for status bar actions
    */
   private registerCommands(): void {
-    const showStatsCommand = vscode.commands.registerCommand(
-      'mdMagic.showDocumentStats',
-      () => this.showDocumentStatsDialog()
+    const showStatsCommand = vscode.commands.registerCommand('mdMagic.showDocumentStats', () =>
+      this.showDocumentStatsDialog()
     );
 
     this.disposables.push(showStatsCommand);
@@ -167,9 +164,10 @@ export class StatusBarManager implements Component {
       return;
     }
 
-    const currentMode = mode || this.modeManager.getCurrentMode(this.currentDocument.id) || EditorMode.Viewer;
+    const currentMode =
+      mode || this.modeManager.getCurrentMode(this.currentDocument.id) || EditorMode.Viewer;
     const modeDisplayName = currentMode === EditorMode.Editor ? 'Editor' : 'Viewer';
-    
+
     this.modeStatusBarItem.text = `$(book) ${modeDisplayName}`;
     this.modeStatusBarItem.tooltip = `Current mode: ${modeDisplayName} - Click to toggle`;
   }
@@ -183,7 +181,7 @@ export class StatusBarManager implements Component {
     }
 
     const stats = this.calculateDocumentStats(this.currentDocument.content);
-    
+
     this.statsStatusBarItem.text = `$(pencil) ${stats.words} words, ${stats.characters} chars`;
     this.statsStatusBarItem.tooltip = `Lines: ${stats.lines} | Words: ${stats.words} | Characters: ${stats.characters} | Paragraphs: ${stats.paragraphs}`;
   }
@@ -198,26 +196,26 @@ export class StatusBarManager implements Component {
         characters: 0,
         charactersWithSpaces: 0,
         lines: 0,
-        paragraphs: 0
+        paragraphs: 0,
       };
     }
 
     const lines = content.split('\n').length;
     const characters = content.replace(/\s/g, '').length;
     const charactersWithSpaces = content.length;
-    
+
     // Count words (split by whitespace, filter empty strings)
     const words = content.trim() ? content.trim().split(/\s+/).length : 0;
-    
+
     // Count paragraphs (separated by double newlines or more)
-    const paragraphs = content.trim() ? content.split(/\n\s*\n/).filter(p => p.trim()).length : 0;
+    const paragraphs = content.trim() ? content.split(/\n\s*\n/).filter((p) => p.trim()).length : 0;
 
     return {
       words,
       characters,
       charactersWithSpaces,
       lines,
-      paragraphs
+      paragraphs,
     };
   }
 
@@ -276,12 +274,12 @@ export class StatusBarManager implements Component {
     wait: number
   ): (...args: Parameters<T>) => void {
     let timeout: NodeJS.Timeout | undefined;
-    
+
     return (...args: Parameters<T>) => {
       if (timeout) {
         clearTimeout(timeout);
       }
-      
+
       timeout = setTimeout(() => {
         func(...args);
       }, wait);
@@ -294,11 +292,11 @@ export class StatusBarManager implements Component {
   private async getExtensionController(): Promise<any> {
     const { ExtensionController } = require('../controllers/ExtensionController');
     const controller = ExtensionController.getInstance();
-    
+
     if (!controller) {
       throw new Error('Extension controller not found');
     }
-    
+
     return controller;
   }
 

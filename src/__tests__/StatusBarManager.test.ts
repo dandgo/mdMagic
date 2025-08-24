@@ -176,8 +176,14 @@ describe('StatusBarManager', () => {
 
       // Should create status bar items
       expect(vscode.window.createStatusBarItem).toHaveBeenCalledTimes(2);
-      expect(vscode.window.createStatusBarItem).toHaveBeenCalledWith(vscode.StatusBarAlignment.Right, 100);
-      expect(vscode.window.createStatusBarItem).toHaveBeenCalledWith(vscode.StatusBarAlignment.Right, 99);
+      expect(vscode.window.createStatusBarItem).toHaveBeenCalledWith(
+        vscode.StatusBarAlignment.Right,
+        100
+      );
+      expect(vscode.window.createStatusBarItem).toHaveBeenCalledWith(
+        vscode.StatusBarAlignment.Right,
+        99
+      );
 
       // Should show status bar items
       expect(vscode.window.createStatusBarItem).toHaveBeenCalledTimes(2);
@@ -192,14 +198,16 @@ describe('StatusBarManager', () => {
     test('should handle missing dependencies gracefully', async () => {
       // Create a status bar manager and manually set the managers to undefined
       const statusBarManagerWithMissingDeps = new StatusBarManager(mockContext);
-      
+
       // Override the getExtensionController to return a controller with missing deps
       (statusBarManagerWithMissingDeps as any).getExtensionController = async () => ({
         getComponent: () => undefined,
       });
 
-      await expect(statusBarManagerWithMissingDeps.initialize()).rejects.toThrow('Required managers not found');
-      
+      await expect(statusBarManagerWithMissingDeps.initialize()).rejects.toThrow(
+        'Required managers not found'
+      );
+
       // Clean up
       statusBarManagerWithMissingDeps.dispose();
     });
@@ -303,15 +311,15 @@ describe('StatusBarManager', () => {
 
     test('should hide status bar when no document is active', async () => {
       await statusBarManager.initialize();
-      
+
       // Get references to the actual status bar items
       const modeItem = (statusBarManager as any).modeStatusBarItem;
       const statsItem = (statusBarManager as any).statsStatusBarItem;
-      
+
       // Clear previous calls from initialization
       modeItem.hide.mockClear();
       statsItem.hide.mockClear();
-      
+
       (statusBarManager as any).currentDocument = undefined;
       (statusBarManager as any).updateStatusBar();
 
@@ -377,11 +385,11 @@ describe('StatusBarManager', () => {
   describe('Disposal', () => {
     test('should dispose all resources', async () => {
       await statusBarManager.initialize();
-      
+
       // Get references to the actual status bar items
       const modeItem = (statusBarManager as any).modeStatusBarItem;
       const statsItem = (statusBarManager as any).statsStatusBarItem;
-      
+
       statusBarManager.dispose();
 
       expect(modeItem.dispose).toHaveBeenCalledTimes(1);
@@ -390,7 +398,7 @@ describe('StatusBarManager', () => {
 
     test('should handle disposal errors gracefully', async () => {
       await statusBarManager.initialize();
-      
+
       mockStatusBarItem.dispose.mockImplementation(() => {
         throw new Error('Disposal error');
       });
@@ -402,7 +410,7 @@ describe('StatusBarManager', () => {
   describe('Utility Functions', () => {
     test('should debounce function calls', async () => {
       await statusBarManager.initialize();
-      
+
       const mockFn = jest.fn();
       const debouncedFn = (statusBarManager as any).debounce(mockFn, 100);
 
@@ -412,7 +420,7 @@ describe('StatusBarManager', () => {
 
       expect(mockFn).not.toHaveBeenCalled();
 
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
       expect(mockFn).toHaveBeenCalledTimes(1);
     });
   });
