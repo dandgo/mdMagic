@@ -143,35 +143,119 @@
       "title": "mdMagic",
       "properties": {
         "mdMagic.defaultMode": {
+          "order": 10,
           "type": "string",
           "enum": [
             "editor",
             "viewer"
           ],
+          "enumDescriptions": [
+            "Start with WYSIWYG editor mode for easy content creation",
+            "Start with preview viewer mode for reading and reviewing content"
+          ],
           "default": "viewer",
-          "description": "Default mode when opening markdown files"
+          "markdownDescription": "**Default mode when opening markdown files.** Choose whether to open markdown files in editor mode for editing or viewer mode for reading. You can always switch modes using `Ctrl+Shift+M` (or `Cmd+Shift+M` on Mac).",
+          "scope": "window",
+          "category": "Behavior"
         },
         "mdMagic.autoSave": {
+          "order": 20,
           "type": "boolean",
           "default": true,
-          "description": "Automatically save changes to markdown files"
+          "markdownDescription": "**Automatically save changes to markdown files.** When enabled, changes are saved automatically as you type. When disabled, you need to manually save using `Ctrl+S` (or `Cmd+S` on Mac).",
+          "scope": "window",
+          "category": "Behavior"
         },
         "mdMagic.previewTheme": {
+          "order": 30,
           "type": "string",
+          "enum": [
+            "default",
+            "github",
+            "minimal",
+            "academic",
+            "dark",
+            "high-contrast"
+          ],
+          "enumDescriptions": [
+            "Clean, balanced theme suitable for most content",
+            "GitHub-style markdown rendering with familiar styling",
+            "Minimal, distraction-free theme for focused reading",
+            "Academic paper style with serif fonts and formal layout",
+            "Dark theme for low-light environments",
+            "High contrast theme for accessibility"
+          ],
           "default": "default",
-          "description": "Theme for markdown preview"
+          "markdownDescription": "**Theme for markdown preview and viewer mode.** Choose from various built-in themes or use 'custom' to load your own CSS. The theme affects colors, fonts, and overall appearance of rendered markdown.",
+          "scope": "window",
+          "category": "Appearance"
         },
         "mdMagic.enableMath": {
+          "order": 40,
           "type": "boolean",
           "default": true,
-          "description": "Enable math rendering in markdown preview"
+          "markdownDescription": "**Enable mathematical equation rendering.** When enabled, LaTeX-style math expressions (e.g., `$E=mc^2$` or `$$\\sum_{i=1}^n x_i$$`) will be rendered as formatted equations using KaTeX. Disable to improve performance if you don't use math in your markdown.",
+          "scope": "window",
+          "category": "Features"
         },
         "mdMagic.showToolbar": {
+          "order": 50,
           "type": "boolean",
           "default": true,
-          "description": "Show the toolbar in editor mode"
+          "markdownDescription": "**Show the formatting toolbar in editor mode.** The toolbar provides quick access to common formatting options like bold, italic, headers, lists, and links. You can hide it for a cleaner interface if you prefer using keyboard shortcuts.",
+          "scope": "window",
+          "category": "Interface"
+        },
+        "mdMagic.enableDiagrams": {
+          "order": 60,
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "**Enable diagram rendering with Mermaid.** When enabled, code blocks with `mermaid` language will be rendered as interactive diagrams. Supports flowcharts, sequence diagrams, class diagrams, and more.",
+          "scope": "window",
+          "category": "Features"
+        },
+        "mdMagic.wordWrap": {
+          "order": 70,
+          "type": "string",
+          "enum": [
+            "off",
+            "on",
+            "wordWrapColumn",
+            "bounded"
+          ],
+          "enumDescriptions": [
+            "Lines will never wrap",
+            "Lines will wrap at the viewport width",
+            "Lines will wrap at the word wrap column",
+            "Lines will wrap at the minimum of viewport width and word wrap column"
+          ],
+          "default": "on",
+          "markdownDescription": "**Word wrapping behavior in editor mode.** Controls how long lines are handled in the editor.",
+          "scope": "window",
+          "category": "Editor"
+        },
+        "mdMagic.fontSize": {
+          "order": 80,
+          "type": "number",
+          "minimum": 8,
+          "maximum": 32,
+          "default": 14,
+          "markdownDescription": "**Font size for the editor and preview.** Set the font size in pixels. Valid range is 8-32 pixels.",
+          "scope": "window",
+          "category": "Appearance"
+        },
+        "mdMagic.lineHeight": {
+          "order": 90,
+          "type": "number",
+          "minimum": 1,
+          "maximum": 3,
+          "default": 1.5,
+          "markdownDescription": "**Line height multiplier for better readability.** Controls the spacing between lines. A value of 1.5 means 1.5 times the font size.",
+          "scope": "window",
+          "category": "Appearance"
         },
         "mdMagic.keyboardShortcuts": {
+          "order": 100,
           "type": "object",
           "default": {
             "toggleMode": "Ctrl+Shift+M",
@@ -182,22 +266,33 @@
           "properties": {
             "toggleMode": {
               "type": "string",
-              "description": "Keyboard shortcut to toggle between editor and viewer modes"
+              "pattern": "^(Ctrl|Cmd|Alt|Shift)\\+(Ctrl|Cmd|Alt|Shift\\+)*[A-Z0-9]$",
+              "description": "Keyboard shortcut to toggle between editor and viewer modes",
+              "default": "Ctrl+Shift+M"
             },
             "save": {
               "type": "string",
-              "description": "Keyboard shortcut to save the current document"
+              "pattern": "^(Ctrl|Cmd|Alt|Shift)\\+(Ctrl|Cmd|Alt|Shift\\+)*[A-Z0-9]$",
+              "description": "Keyboard shortcut to save the current document",
+              "default": "Ctrl+S"
             },
             "export": {
               "type": "string",
-              "description": "Keyboard shortcut to export the document"
+              "pattern": "^(Ctrl|Cmd|Alt|Shift)\\+(Ctrl|Cmd|Alt|Shift\\+)*[A-Z0-9]$",
+              "description": "Keyboard shortcut to export the document",
+              "default": "Ctrl+Shift+E"
             },
             "togglePreview": {
               "type": "string",
-              "description": "Keyboard shortcut to toggle preview"
+              "pattern": "^(Ctrl|Cmd|Alt|Shift)\\+(Ctrl|Cmd|Alt|Shift\\+)*[A-Z0-9]$",
+              "description": "Keyboard shortcut to toggle preview mode",
+              "default": "Ctrl+Shift+V"
             }
           },
-          "description": "Keyboard shortcuts for mdMagic commands"
+          "additionalProperties": false,
+          "markdownDescription": "**Custom keyboard shortcuts for mdMagic commands.** Define your own shortcuts using the format `Ctrl+Key`, `Cmd+Key`, `Alt+Key`, or combinations like `Ctrl+Shift+Key`. Use `Cmd` instead of `Ctrl` on macOS.",
+          "scope": "window",
+          "category": "Shortcuts"
         }
       }
     }
@@ -229,7 +324,7 @@
     "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.32.0",
     "jest": "^29.5.0",
-    "prettier": "^3.0.0",
+    "prettier": "^3.6.2",
     "ts-jest": "^29.1.0",
     "ts-loader": "^9.5.2",
     "typescript": "^5.9.2",
