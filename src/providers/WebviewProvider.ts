@@ -284,6 +284,7 @@ export class WebviewProvider implements Component {
 
     // Send initial content once webview is ready
     setTimeout(() => {
+      console.log(`[WebviewProvider] Sending initial content to webview: ${content.substring(0, 100)}...`);
       panel.webview.postMessage({
         type: MessageType.SET_CONTENT,
         payload: { content },
@@ -420,12 +421,17 @@ export class WebviewProvider implements Component {
     console.log(`[WebviewProvider] Webview ${panelId} is ready`);
 
     const panelInfo = this.panels.get(panelId);
-    if (panelInfo && panelInfo.state.content) {
+    if (panelInfo) {
+      const content = panelInfo.state.content;
+      console.log(`[WebviewProvider] Sending content to ready webview: ${content.substring(0, 100)}...`);
+      
       // Send initial content
       panelInfo.panel.webview.postMessage({
         type: MessageType.SET_CONTENT,
-        payload: { content: panelInfo.state.content },
+        payload: { content },
       });
+    } else {
+      console.warn(`[WebviewProvider] Panel ${panelId} not found when ready`);
     }
   }
 
