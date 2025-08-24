@@ -66,6 +66,10 @@ class MdMagicEditor {
       
       // Initialize preview
       this.setupPreview();
+    this.setupToolbarVisibility();
+    
+    // Initialize toolbar button states
+    this.updateToolbarButtonStates();
       
       // Update status
       this.updateStatus();
@@ -93,14 +97,14 @@ class MdMagicEditor {
     const toolbar = document.getElementById('toolbar');
     toolbar.innerHTML = `
       <!-- Format Group -->
-      <div class="toolbar-group">
-        <button id="btn-bold" title="Bold (Ctrl+B)" data-command="bold">
+      <div class="toolbar-group" role="group" aria-label="Text Formatting">
+        <button id="btn-bold" title="Bold (Ctrl+B)" data-command="bold" aria-label="Bold" aria-pressed="false">
           <strong>B</strong>
         </button>
-        <button id="btn-italic" title="Italic (Ctrl+I)" data-command="italic">
+        <button id="btn-italic" title="Italic (Ctrl+I)" data-command="italic" aria-label="Italic" aria-pressed="false">
           <em>I</em>
         </button>
-        <button id="btn-strikethrough" title="Strikethrough" data-command="strikethrough">
+        <button id="btn-strikethrough" title="Strikethrough" data-command="strikethrough" aria-label="Strikethrough" aria-pressed="false">
           <s>S</s>
         </button>
       </div>
@@ -157,6 +161,19 @@ class MdMagicEditor {
         </button>
       </div>
 
+      <!-- Utilities Group -->
+      <div class="toolbar-group">
+        <button id="btn-undo" title="Undo (Ctrl+Z)" data-command="undo">
+          ↶ Undo
+        </button>
+        <button id="btn-redo" title="Redo (Ctrl+Y)" data-command="redo">
+          ↷ Redo
+        </button>
+        <button id="btn-find" title="Find/Replace (Ctrl+F)" data-command="find-replace">
+          🔍 Find
+        </button>
+      </div>
+
       <!-- Actions Group -->
       <div class="toolbar-group">
         <button id="btn-save" title="Save (Ctrl+S)" data-command="save">
@@ -198,6 +215,7 @@ class MdMagicEditor {
     this.editor.onDidChangeCursorPosition((e) => {
       this.documentState.cursorPosition = e.position;
       this.updateStatus();
+      this.updateToolbarButtonStates();
     });
 
     // Window message handling
@@ -231,6 +249,9 @@ class MdMagicEditor {
       { key: 'Ctrl+I', command: 'italic' },
       { key: 'Ctrl+K', command: 'link' },
       { key: 'Ctrl+S', command: 'save' },
+      { key: 'Ctrl+Z', command: 'undo' },
+      { key: 'Ctrl+Y', command: 'redo' },
+      { key: 'Ctrl+F', command: 'find-replace' },
       { key: 'Ctrl+Shift+P', command: 'toggle-preview' },
       { key: 'Ctrl+Shift+W', command: 'toggle-wysiwyg' }
     ];
@@ -259,6 +280,42 @@ class MdMagicEditor {
    */
   setupToolbar() {
     // All toolbar setup is handled in setupEventListeners via event delegation
+  }
+
+  /**
+   * Set up toolbar visibility based on configuration
+   */
+  setupToolbarVisibility() {
+    // Listen for configuration changes
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'configurationChanged' && event.data.payload.showToolbar !== undefined) {
+        this.setToolbarVisibility(event.data.payload.showToolbar);
+      }
+    });
+    
+    // Initial toolbar visibility (default to true if not specified)
+    this.setToolbarVisibility(true);
+  }
+
+  /**
+   * Set toolbar visibility
+   */
+  setToolbarVisibility(visible) {
+    const toolbar = document.getElementById('toolbar');
+    if (toolbar) {
+      toolbar.style.display = visible ? 'flex' : 'none';
+      
+      // Adjust editor container height when toolbar is hidden/shown
+      const editorContainer = document.getElementById('editor-container');
+      if (editorContainer) {
+        editorContainer.style.height = visible ? 'calc(100vh - var(--toolbar-height) - var(--status-height))' : 'calc(100vh - var(--status-height))';
+      }
+      
+      // Relayout Monaco editor
+      if (this.editor) {
+        this.editor.layout();
+      }
+    }
   }
 
   /**
@@ -316,6 +373,101 @@ class MdMagicEditor {
       case 'save':
         this.saveDocument();
         break;
+      case 'undo':
+        this.editor.trigger('keyboard', 'undo', null);
+        break;
+      case 'redo':
+        this.editor.trigger('keyboard', 'redo', null);
+        break;
+      case 'find-replace':
+        this.editor.trigger('keyboard', 'actions.find', null);
+        break;
+    }
+  }
+
+  /**
+   * Update toolbar button states based on current cursor position
+   */
+  updateToolbarButtonStates() {
+    if (!this.isInitialized || !this.editor) {
+      return;
+    }
+
+    const position = this.editor.getPosition();
+    const model = this.editor.getModel();
+    if (!position || !model) {
+      return;
+    }
+
+    // Get current line text
+    const lineContent = model.getLineContent(position.lineNumber);
+    const currentWord = this.getWordAtPosition(position);
+
+    // Update button states based on current formatting
+    this.updateButtonState('btn-bold', this.isTextInFormatting(currentWord, '**'));
+    this.updateButtonState('btn-italic', this.isTextInFormatting(currentWord, '*') || this.isTextInFormatting(currentWord, '_'));
+    this.updateButtonState('btn-strikethrough', this.isTextInFormatting(currentWord, '~~'));
+    
+    // Update header state
+    const headerMatch = lineContent.match(/^(#{1,6})\s/);
+    this.updateHeaderSelect(headerMatch ? headerMatch[1].length : 0);
+    
+    // Update list states
+    this.updateButtonState('btn-ul', /^\s*[-*+]\s/.test(lineContent));
+    this.updateButtonState('btn-ol', /^\s*\d+\.\s/.test(lineContent));
+    this.updateButtonState('btn-checklist', /^\s*[-*+]\s*\[[ x]\]\s/.test(lineContent));
+  }
+
+  /**
+   * Get word at current position including formatting
+   */
+  getWordAtPosition(position) {
+    const model = this.editor.getModel();
+    const lineContent = model.getLineContent(position.lineNumber);
+    
+    // Find word boundaries considering markdown formatting
+    let startCol = position.column;
+    let endCol = position.column;
+    
+    // Expand to include formatting characters
+    while (startCol > 1 && /[\w*_~`]/.test(lineContent.charAt(startCol - 2))) {
+      startCol--;
+    }
+    while (endCol <= lineContent.length && /[\w*_~`]/.test(lineContent.charAt(endCol - 1))) {
+      endCol++;
+    }
+    
+    return lineContent.substring(startCol - 1, endCol - 1);
+  }
+
+  /**
+   * Check if text is wrapped in formatting
+   */
+  isTextInFormatting(text, formatting) {
+    if (!text || text.length < formatting.length * 2) {
+      return false;
+    }
+    return text.startsWith(formatting) && text.endsWith(formatting);
+  }
+
+  /**
+   * Update button active state
+   */
+  updateButtonState(buttonId, isActive) {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', isActive.toString());
+    }
+  }
+
+  /**
+   * Update header select value
+   */
+  updateHeaderSelect(headerLevel) {
+    const select = document.getElementById('header-select');
+    if (select) {
+      select.value = headerLevel > 0 ? headerLevel.toString() : '';
     }
   }
 
@@ -741,6 +893,9 @@ class MdMagicEditor {
         // Handle configuration updates
         if (message.payload.autoSave !== undefined) {
           this.autoSaveDelay = message.payload.autoSave ? 1000 : 0;
+        }
+        if (message.payload.showToolbar !== undefined) {
+          this.setToolbarVisibility(message.payload.showToolbar);
         }
         break;
         
