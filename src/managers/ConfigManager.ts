@@ -271,7 +271,11 @@ export class ConfigManager implements IConfigManager {
 
     // Validate lineHeight
     if (config.lineHeight !== undefined) {
-      if (typeof config.lineHeight !== 'number' || config.lineHeight < 1.0 || config.lineHeight > 3.0) {
+      if (
+        typeof config.lineHeight !== 'number' ||
+        config.lineHeight < 1.0 ||
+        config.lineHeight > 3.0
+      ) {
         errors.push('lineHeight must be a number between 1.0 and 3.0');
       }
     }

@@ -324,7 +324,9 @@ describe('ConfigManager', () => {
 
       const result = configManager.validateConfiguration(invalidConfig);
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('previewTheme must be one of: default, github, minimal, academic, dark, high-contrast');
+      expect(result.errors).toContain(
+        'previewTheme must be one of: default, github, minimal, academic, dark, high-contrast'
+      );
     });
 
     test('should validate invalid keyboardShortcuts', () => {
