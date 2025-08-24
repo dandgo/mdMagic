@@ -233,7 +233,7 @@ describe('Enhanced Viewer Webview Implementation (Task 2.3)', () => {
       const panel = await webviewProvider.createViewerWebview(mockUri, testMarkdownContent);
 
       const panels = webviewProvider.getActivePanels();
-      expect(panels[0].mode).toBe(EditorMode.VIEWER);
+      expect(panels[0].mode).toBe(EditorMode.Viewer);
     });
 
     it('should load viewer template for viewer mode', async () => {
@@ -273,7 +273,7 @@ describe('Enhanced Viewer Webview Implementation (Task 2.3)', () => {
       const state = webviewProvider.getWebviewState(panelId);
 
       expect(state).toBeDefined();
-      expect(state?.mode).toBe(EditorMode.VIEWER);
+      expect(state?.mode).toBe(EditorMode.Viewer);
       expect(state?.content).toBe(testMarkdownContent);
     });
 
@@ -285,7 +285,7 @@ describe('Enhanced Viewer Webview Implementation (Task 2.3)', () => {
 
       const newState = {
         documentId: 'test-doc',
-        mode: EditorMode.VIEWER,
+        mode: EditorMode.Viewer,
         content: '# Restored Content',
         isDirty: false,
         lastModified: new Date(),

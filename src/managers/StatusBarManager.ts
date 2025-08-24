@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { Component } from '../controllers/ExtensionController';
 import { IDocumentManager } from './DocumentManager';
 import { IModeManager } from './ModeManager';
-import { IMarkdownDocument } from './MarkdownDocument';
+import { IMarkdownDocument, EditorMode } from './MarkdownDocument';
 
 export interface DocumentStats {
   words: number;
@@ -162,13 +162,13 @@ export class StatusBarManager implements Component {
   /**
    * Update mode indicator
    */
-  private updateModeIndicator(mode?: string): void {
+  private updateModeIndicator(mode?: EditorMode): void {
     if (!this.currentDocument || !this.modeManager) {
       return;
     }
 
-    const currentMode = mode || this.modeManager.getCurrentMode(this.currentDocument.id) || 'viewer';
-    const modeDisplayName = currentMode === 'editor' ? 'Editor' : 'Viewer';
+    const currentMode = mode || this.modeManager.getCurrentMode(this.currentDocument.id) || EditorMode.Viewer;
+    const modeDisplayName = currentMode === EditorMode.Editor ? 'Editor' : 'Viewer';
     
     this.modeStatusBarItem.text = `$(book) ${modeDisplayName}`;
     this.modeStatusBarItem.tooltip = `Current mode: ${modeDisplayName} - Click to toggle`;

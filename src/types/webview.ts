@@ -3,15 +3,13 @@
  */
 
 import * as vscode from 'vscode';
+import { EditorMode } from '../managers/MarkdownDocument';
 
-export enum EditorMode {
-  EDITOR = 'editor',
-  VIEWER = 'viewer',
-  SPLIT = 'split',
-}
+export { EditorMode };
 
 export enum MessageType {
   CONTENT_CHANGED = 'contentChanged',
+  SET_CONTENT = 'setContent',
   MODE_SWITCH = 'modeSwitch',
   SAVE_DOCUMENT = 'saveDocument',
   EXECUTE_COMMAND = 'executeCommand',

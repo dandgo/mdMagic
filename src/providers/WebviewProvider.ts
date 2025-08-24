@@ -65,7 +65,7 @@ export class WebviewProvider implements Component {
 
     // Create new webview panel
     const panel = vscode.window.createWebviewPanel(
-      mode === EditorMode.EDITOR ? 'mdMagic.editor' : 'mdMagic.viewer',
+      mode === EditorMode.Editor ? 'mdMagic.editor' : 'mdMagic.viewer',
       `mdMagic ${mode}: ${path.basename(documentUri.fsPath)}`,
       vscode.ViewColumn.One,
       this.getWebviewOptions()
@@ -84,7 +84,7 @@ export class WebviewProvider implements Component {
     documentUri: vscode.Uri,
     content: string = ''
   ): Promise<vscode.WebviewPanel> {
-    return this.createWebview(documentUri, EditorMode.EDITOR, content);
+    return this.createWebview(documentUri, EditorMode.Editor, content);
   }
 
   /**
@@ -94,7 +94,7 @@ export class WebviewProvider implements Component {
     documentUri: vscode.Uri,
     content: string = ''
   ): Promise<vscode.WebviewPanel> {
-    return this.createWebview(documentUri, EditorMode.VIEWER, content);
+    return this.createWebview(documentUri, EditorMode.Viewer, content);
   }
 
   /**
@@ -174,7 +174,7 @@ export class WebviewProvider implements Component {
 
       // Send restored content to webview
       panelInfo.panel.webview.postMessage({
-        type: 'setContent',
+        type: MessageType.SET_CONTENT,
         payload: { content: state.content },
       });
     }
@@ -285,7 +285,7 @@ export class WebviewProvider implements Component {
     // Send initial content once webview is ready
     setTimeout(() => {
       panel.webview.postMessage({
-        type: 'setContent',
+        type: MessageType.SET_CONTENT,
         payload: { content },
       });
     }, 100);
@@ -423,7 +423,7 @@ export class WebviewProvider implements Component {
     if (panelInfo && panelInfo.state.content) {
       // Send initial content
       panelInfo.panel.webview.postMessage({
-        type: 'setContent',
+        type: MessageType.SET_CONTENT,
         payload: { content: panelInfo.state.content },
       });
     }
@@ -574,7 +574,7 @@ class WebviewSerializer implements vscode.WebviewPanelSerializer {
       // Send restored content to webview once it's ready
       setTimeout(() => {
         webviewPanel.webview.postMessage({
-          type: 'setContent',
+          type: MessageType.SET_CONTENT,
           payload: { content: restoredState.content },
         });
       }, 100);

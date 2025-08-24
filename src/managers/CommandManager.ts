@@ -5,6 +5,7 @@
 
 import * as vscode from 'vscode';
 import { Component } from '../controllers/ExtensionController';
+import { EditorMode } from '../managers/MarkdownDocument';
 
 // Command interfaces
 export interface CommandHandler {
@@ -85,7 +86,7 @@ export class CommandManager implements ICommandManager {
           if (modeManager) {
             const documentId = activeEditor.document.uri.toString();
             const currentMode = modeManager.getCurrentMode(documentId);
-            const targetMode = currentMode === 'editor' ? 'viewer' : 'editor';
+            const targetMode = currentMode === EditorMode.Editor ? EditorMode.Viewer : EditorMode.Editor;
             await modeManager.switchMode(documentId, targetMode);
           }
         },

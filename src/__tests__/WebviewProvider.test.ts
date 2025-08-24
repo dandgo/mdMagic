@@ -88,7 +88,7 @@ describe('WebviewProvider', () => {
       const panels = webviewProvider.getActivePanels();
 
       expect(panels).toHaveLength(1);
-      expect(panels[0].mode).toBe(EditorMode.EDITOR);
+      expect(panels[0].mode).toBe(EditorMode.Editor);
       expect(panels[0].documentId).toContain('doc_');
     });
   });
@@ -226,7 +226,7 @@ describe('WebviewProvider', () => {
 
       expect(state).toBeDefined();
       expect(state?.content).toBe('test content');
-      expect(state?.mode).toBe(EditorMode.EDITOR);
+      expect(state?.mode).toBe(EditorMode.Editor);
     });
 
     it('should restore webview state', () => {
@@ -235,7 +235,7 @@ describe('WebviewProvider', () => {
 
       const newState = {
         documentId: 'test',
-        mode: EditorMode.EDITOR,
+        mode: EditorMode.Editor,
         content: 'restored content',
         isDirty: false,
         lastModified: new Date(),
@@ -260,7 +260,7 @@ describe('WebviewProvider', () => {
       const state = (panel as any).getState();
       expect(state).toBeDefined();
       expect(state.documentId).toBeDefined();
-      expect(state.mode).toBe(EditorMode.EDITOR);
+      expect(state.mode).toBe(EditorMode.Editor);
       expect(state.content).toBe('test content');
       expect(state.documentUri).toBeDefined();
       expect(typeof state.lastModified).toBe('string'); // Should be ISO string
