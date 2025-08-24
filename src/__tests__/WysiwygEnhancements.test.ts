@@ -16,7 +16,12 @@ describe('WYSIWYG Enhancement (Task 4.1)', () => {
       setValue: jest.fn(),
       getPosition: jest.fn(() => ({ lineNumber: 1, column: 1 })),
       setPosition: jest.fn(),
-      getSelection: jest.fn(() => ({ startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 })),
+      getSelection: jest.fn(() => ({
+        startLineNumber: 1,
+        startColumn: 1,
+        endLineNumber: 1,
+        endColumn: 1,
+      })),
       executeEdits: jest.fn(),
       focus: jest.fn(),
       onDidChangeModelContent: jest.fn(() => ({ dispose: jest.fn() })),
@@ -86,29 +91,31 @@ describe('WYSIWYG Enhancement (Task 4.1)', () => {
       // Mock editor implementation with HTML-to-Markdown conversion
       const convertHTMLToMarkdown = (html: string) => {
         let markdown = html;
-        
+
         // Convert headers
         markdown = markdown.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
         markdown = markdown.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
-        
+
         // Convert bold
         markdown = markdown.replace(/<(strong|b)[^>]*>(.*?)<\/(strong|b)>/gi, '**$2**');
-        
+
         // Convert italic
         markdown = markdown.replace(/<(em|i)[^>]*>(.*?)<\/(em|i)>/gi, '*$2*');
-        
+
         // Convert links
         markdown = markdown.replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
-        
+
         // Remove HTML tags
         markdown = markdown.replace(/<[^>]*>/g, '');
-        
+
         return markdown.trim();
       };
 
-      const htmlInput = '<h1>Title</h1><p>This is <strong>bold</strong> and <em>italic</em> text.</p><a href="https://example.com">Link</a>';
-      const expectedMarkdown = '# Title\n\nThis is **bold** and *italic* text.[Link](https://example.com)';
-      
+      const htmlInput =
+        '<h1>Title</h1><p>This is <strong>bold</strong> and <em>italic</em> text.</p><a href="https://example.com">Link</a>';
+      const expectedMarkdown =
+        '# Title\n\nThis is **bold** and *italic* text.[Link](https://example.com)';
+
       const result = convertHTMLToMarkdown(htmlInput);
       expect(result).toBe(expectedMarkdown);
     });
@@ -151,7 +158,7 @@ describe('WYSIWYG Enhancement (Task 4.1)', () => {
     test('should provide header completions', () => {
       const provideCompletionItems = (textUntilPosition: string) => {
         const suggestions: any[] = [];
-        
+
         if (textUntilPosition.match(/^#*$/)) {
           for (let i = 1; i <= 6; i++) {
             suggestions.push({
@@ -161,7 +168,7 @@ describe('WYSIWYG Enhancement (Task 4.1)', () => {
             });
           }
         }
-        
+
         return { suggestions };
       };
 
@@ -174,7 +181,7 @@ describe('WYSIWYG Enhancement (Task 4.1)', () => {
     test('should provide formatting completions', () => {
       const provideCompletionItems = (textUntilPosition: string) => {
         const suggestions: any[] = [];
-        
+
         if (textUntilPosition.match(/\*$/)) {
           suggestions.push({
             label: '**bold**',
@@ -182,7 +189,7 @@ describe('WYSIWYG Enhancement (Task 4.1)', () => {
             documentation: 'Bold text formatting',
           });
         }
-        
+
         return { suggestions };
       };
 
@@ -194,15 +201,16 @@ describe('WYSIWYG Enhancement (Task 4.1)', () => {
     test('should provide table completions', () => {
       const provideCompletionItems = (textUntilPosition: string) => {
         const suggestions: any[] = [];
-        
+
         if (textUntilPosition.match(/^\|?[\s]*$/)) {
           suggestions.push({
             label: 'Table',
-            insertText: '| ${1:Header 1} | ${2:Header 2} | ${3:Header 3} |\n| --- | --- | --- |\n| ${4:Cell 1} | ${5:Cell 2} | ${6:Cell 3} |',
+            insertText:
+              '| ${1:Header 1} | ${2:Header 2} | ${3:Header 3} |\n| --- | --- | --- |\n| ${4:Cell 1} | ${5:Cell 2} | ${6:Cell 3} |',
             documentation: 'Insert table',
           });
         }
-        
+
         return { suggestions };
       };
 
@@ -234,18 +242,18 @@ describe('WYSIWYG Enhancement (Task 4.1)', () => {
       // Simulate drag drop handler
       const handleDragDrop = (event: any) => {
         event.preventDefault();
-        
+
         const files = event.dataTransfer?.files;
         if (!files || files.length === 0) {
           return false;
         }
-        
+
         for (const file of files) {
           if (file.type.startsWith('image/')) {
             return true; // Would insert image
           }
         }
-        
+
         return false;
       };
 
@@ -275,15 +283,22 @@ describe('WYSIWYG Enhancement (Task 4.1)', () => {
     });
 
     test('should navigate table cells correctly', () => {
-      const navigateTableCell = (lineContent: string, currentColumn: number, direction: 'next' | 'prev') => {
-        const cells = lineContent.split('|').map(cell => cell.trim()).filter(cell => cell.length > 0);
-        
+      const navigateTableCell = (
+        lineContent: string,
+        currentColumn: number,
+        direction: 'next' | 'prev'
+      ) => {
+        const cells = lineContent
+          .split('|')
+          .map((cell) => cell.trim())
+          .filter((cell) => cell.length > 0);
+
         // Find current cell based on column position
         // For table "| Cell 1 | Cell 2 | Cell 3 |"
         // Positions: 0-8 (Cell 1), 9-17 (Cell 2), 18-26 (Cell 3)
         let cellStart = 2; // Start after first "|"
         let currentCellIndex = 0;
-        
+
         for (let i = 0; i < cells.length; i++) {
           const cellEnd = cellStart + cells[i].length;
           if (currentColumn >= cellStart && currentColumn <= cellEnd) {
@@ -292,27 +307,27 @@ describe('WYSIWYG Enhancement (Task 4.1)', () => {
           }
           cellStart = cellEnd + 3; // Move to next cell (| + space + cell + space)
         }
-        
+
         if (direction === 'next' && currentCellIndex < cells.length - 1) {
           return currentCellIndex + 1;
         } else if (direction === 'prev' && currentCellIndex > 0) {
           return currentCellIndex - 1;
         }
-        
+
         return currentCellIndex;
       };
 
       const tableLine = '| Cell 1 | Cell 2 | Cell 3 |';
-      
+
       // Test navigation - column 5 should be in Cell 1 (index 0), next should be index 1
       expect(navigateTableCell(tableLine, 5, 'next')).toBe(1); // From Cell 1 to Cell 2
-      // Column 15 should be in Cell 2 (index 1), prev should be index 0  
+      // Column 15 should be in Cell 2 (index 1), prev should be index 0
       expect(navigateTableCell(tableLine, 15, 'prev')).toBe(0); // From Cell 2 to Cell 1
     });
 
     test('should add table rows correctly', () => {
       const addTableRow = (lineContent: string) => {
-        const cells = lineContent.split('|').filter(cell => cell.trim().length > 0);
+        const cells = lineContent.split('|').filter((cell) => cell.trim().length > 0);
         const numCols = cells.length;
         return '| ' + Array(numCols).fill('Cell').join(' | ') + ' |';
       };
@@ -324,7 +339,11 @@ describe('WYSIWYG Enhancement (Task 4.1)', () => {
 
   describe('Enhanced Live Preview', () => {
     test('should sync scroll positions', () => {
-      const syncScrollPosition = (editorScrollTop: number, editorScrollHeight: number, editorViewHeight: number) => {
+      const syncScrollPosition = (
+        editorScrollTop: number,
+        editorScrollHeight: number,
+        editorViewHeight: number
+      ) => {
         const scrollRatio = editorScrollTop / (editorScrollHeight - editorViewHeight);
         return Math.max(0, Math.min(1, scrollRatio)); // Clamp between 0 and 1
       };
@@ -337,11 +356,11 @@ describe('WYSIWYG Enhancement (Task 4.1)', () => {
       const updatePreviewWithAnimation = (content: string, previewElement: any) => {
         previewElement.style.opacity = '0.8';
         previewElement.innerHTML = content;
-        
+
         setTimeout(() => {
           previewElement.style.opacity = '1';
         }, 50);
-        
+
         return true;
       };
 
@@ -395,14 +414,14 @@ describe('WYSIWYG Enhancement (Task 4.1)', () => {
       // Toggle WYSIWYG mode
       const toggleWysiwyg = () => {
         isWysiwygMode = !isWysiwygMode;
-        
+
         if (isWysiwygMode) {
           autoSaveDelay = 100;
           previewVisible = true;
         } else {
           autoSaveDelay = 1000;
         }
-        
+
         return { isWysiwygMode, previewVisible, autoSaveDelay };
       };
 
@@ -425,13 +444,13 @@ describe('WYSIWYG Enhancement (Task 4.1)', () => {
           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
           .replace(/\*(.*?)\*/g, '<em>$1</em>')
           .replace(/^# (.*$)/gm, '<h1>$1</h1>');
-        
+
         return formatted;
       };
 
       const input = '# Title\n\nThis is **bold** and *italic* text.';
       const expected = '<h1>Title</h1>\n\nThis is <strong>bold</strong> and <em>italic</em> text.';
-      
+
       const result = formatTextAsTyped(input);
       expect(result).toBe(expected);
     });
