@@ -17,9 +17,13 @@ export interface KeyboardShortcuts {
 export interface ExtensionConfiguration {
   defaultMode: 'editor' | 'viewer';
   autoSave: boolean;
-  previewTheme: string;
+  previewTheme: 'default' | 'github' | 'minimal' | 'academic' | 'dark' | 'high-contrast';
   enableMath: boolean;
   showToolbar: boolean;
+  enableDiagrams: boolean;
+  wordWrap: 'off' | 'on' | 'wordWrapColumn' | 'bounded';
+  fontSize: number;
+  lineHeight: number;
   keyboardShortcuts: KeyboardShortcuts;
 }
 
@@ -67,6 +71,10 @@ export class ConfigManager implements IConfigManager {
     previewTheme: 'default',
     enableMath: true,
     showToolbar: true,
+    enableDiagrams: true,
+    wordWrap: 'on',
+    fontSize: 14,
+    lineHeight: 1.5,
     keyboardShortcuts: {
       toggleMode: 'Ctrl+Shift+M',
       save: 'Ctrl+S',
@@ -224,8 +232,11 @@ export class ConfigManager implements IConfigManager {
     }
 
     // Validate previewTheme
-    if (config.previewTheme !== undefined && typeof config.previewTheme !== 'string') {
-      errors.push('previewTheme must be a string');
+    if (config.previewTheme !== undefined) {
+      const validThemes = ['default', 'github', 'minimal', 'academic', 'dark', 'high-contrast'];
+      if (!validThemes.includes(config.previewTheme)) {
+        errors.push(`previewTheme must be one of: ${validThemes.join(', ')}`);
+      }
     }
 
     // Validate enableMath
@@ -236,6 +247,33 @@ export class ConfigManager implements IConfigManager {
     // Validate showToolbar
     if (config.showToolbar !== undefined && typeof config.showToolbar !== 'boolean') {
       errors.push('showToolbar must be a boolean');
+    }
+
+    // Validate enableDiagrams
+    if (config.enableDiagrams !== undefined && typeof config.enableDiagrams !== 'boolean') {
+      errors.push('enableDiagrams must be a boolean');
+    }
+
+    // Validate wordWrap
+    if (config.wordWrap !== undefined) {
+      const validWrapValues = ['off', 'on', 'wordWrapColumn', 'bounded'];
+      if (!validWrapValues.includes(config.wordWrap)) {
+        errors.push(`wordWrap must be one of: ${validWrapValues.join(', ')}`);
+      }
+    }
+
+    // Validate fontSize
+    if (config.fontSize !== undefined) {
+      if (typeof config.fontSize !== 'number' || config.fontSize < 8 || config.fontSize > 32) {
+        errors.push('fontSize must be a number between 8 and 32');
+      }
+    }
+
+    // Validate lineHeight
+    if (config.lineHeight !== undefined) {
+      if (typeof config.lineHeight !== 'number' || config.lineHeight < 1.0 || config.lineHeight > 3.0) {
+        errors.push('lineHeight must be a number between 1.0 and 3.0');
+      }
     }
 
     // Validate keyboardShortcuts
@@ -277,6 +315,10 @@ export class ConfigManager implements IConfigManager {
         previewTheme: config.get('previewTheme') ?? this.defaultConfiguration.previewTheme,
         enableMath: config.get('enableMath') ?? this.defaultConfiguration.enableMath,
         showToolbar: config.get('showToolbar') ?? this.defaultConfiguration.showToolbar,
+        enableDiagrams: config.get('enableDiagrams') ?? this.defaultConfiguration.enableDiagrams,
+        wordWrap: config.get('wordWrap') ?? this.defaultConfiguration.wordWrap,
+        fontSize: config.get('fontSize') ?? this.defaultConfiguration.fontSize,
+        lineHeight: config.get('lineHeight') ?? this.defaultConfiguration.lineHeight,
         keyboardShortcuts: {
           ...this.defaultConfiguration.keyboardShortcuts,
           ...(config.get('keyboardShortcuts') ?? {}),

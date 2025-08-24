@@ -152,6 +152,10 @@ describe('ConfigManager', () => {
         previewTheme: 'dark',
         enableMath: false,
         showToolbar: false,
+        enableDiagrams: true,
+        wordWrap: 'on',
+        fontSize: 14,
+        lineHeight: 1.5,
         keyboardShortcuts: {
           toggleMode: 'Ctrl+M',
           save: 'Ctrl+S',
@@ -196,6 +200,10 @@ describe('ConfigManager', () => {
         previewTheme: 'default',
         enableMath: true,
         showToolbar: true,
+        enableDiagrams: true,
+        wordWrap: 'on',
+        fontSize: 14,
+        lineHeight: 1.5,
         keyboardShortcuts: {
           toggleMode: 'Ctrl+Shift+M',
           save: 'Ctrl+S',
@@ -312,11 +320,11 @@ describe('ConfigManager', () => {
     });
 
     test('should validate invalid previewTheme', () => {
-      const invalidConfig = { previewTheme: 123 as any };
+      const invalidConfig = { previewTheme: 'invalid-theme' as any };
 
       const result = configManager.validateConfiguration(invalidConfig);
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('previewTheme must be a string');
+      expect(result.errors).toContain('previewTheme must be one of: default, github, minimal, academic, dark, high-contrast');
     });
 
     test('should validate invalid keyboardShortcuts', () => {
@@ -340,6 +348,52 @@ describe('ConfigManager', () => {
       expect(result.errors).toContain('keyboardShortcuts.save must be a string');
       expect(result.errors).toContain('keyboardShortcuts.export must be a string');
       expect(result.errors).toContain('keyboardShortcuts.togglePreview must be a string');
+    });
+
+    test('should validate new configuration options', () => {
+      // Test valid new options
+      const validConfig = {
+        enableDiagrams: true,
+        wordWrap: 'bounded',
+        fontSize: 16,
+        lineHeight: 1.8,
+      };
+
+      const result = configManager.validateConfiguration(validConfig);
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    test('should validate invalid enableDiagrams', () => {
+      const invalidConfig = { enableDiagrams: 'not-boolean' as any };
+
+      const result = configManager.validateConfiguration(invalidConfig);
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('enableDiagrams must be a boolean');
+    });
+
+    test('should validate invalid wordWrap', () => {
+      const invalidConfig = { wordWrap: 'invalid-wrap' as any };
+
+      const result = configManager.validateConfiguration(invalidConfig);
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('wordWrap must be one of: off, on, wordWrapColumn, bounded');
+    });
+
+    test('should validate invalid fontSize', () => {
+      const invalidConfig = { fontSize: 5 as any };
+
+      const result = configManager.validateConfiguration(invalidConfig);
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('fontSize must be a number between 8 and 32');
+    });
+
+    test('should validate invalid lineHeight', () => {
+      const invalidConfig = { lineHeight: 0.5 as any };
+
+      const result = configManager.validateConfiguration(invalidConfig);
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('lineHeight must be a number between 1.0 and 3.0');
     });
 
     test('should handle invalid configuration during loading', async () => {
