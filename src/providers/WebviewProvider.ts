@@ -24,10 +24,18 @@ export class WebviewProvider implements Component {
   private disposables: vscode.Disposable[] = [];
   private extensionPath: string;
   private messageHandlers = new Map<MessageType, Function>();
+  private extensionController: any = null;
 
   constructor(private context: vscode.ExtensionContext) {
     this.extensionPath = context.extensionPath;
     this.setupMessageHandlers();
+  }
+
+  /**
+   * Set the extension controller reference
+   */
+  public setExtensionController(controller: any): void {
+    this.extensionController = controller;
   }
 
   /**
@@ -224,6 +232,17 @@ export class WebviewProvider implements Component {
   ): Promise<void> {
     const panelId = this.generatePanelId();
     const documentId = this.generateDocumentId(documentUri);
+
+    // Ensure document is opened in DocumentManager for file watching
+    try {
+      const documentManager = this.extensionController?.getComponent('document-manager');
+      if (documentManager) {
+        await documentManager.openDocument(documentUri);
+        console.log(`[WebviewProvider] Opened document in DocumentManager: ${documentUri.fsPath}`);
+      }
+    } catch (error) {
+      console.warn(`[WebviewProvider] Failed to open document in DocumentManager: ${error}`);
+    }
 
     // Create panel info
     const panelInfo: WebviewPanelInfo = {
@@ -483,6 +502,20 @@ export class WebviewProvider implements Component {
     try {
       if (command === 'vscode.open') {
         vscode.env.openExternal(vscode.Uri.parse(args[0]));
+      } else if (command === 'refresh') {
+        // Handle refresh command with document URI from panel context
+        const panelInfo = this.panels.get(panelId);
+        if (panelInfo) {
+          // Extract URI from document ID or get current active document
+          const activeEditor = vscode.window.activeTextEditor;
+          const uri = activeEditor?.document?.uri;
+          
+          if (uri && uri.path.endsWith('.md')) {
+            vscode.commands.executeCommand('mdMagic.refresh', uri);
+          } else {
+            vscode.window.showWarningMessage('No markdown file available to refresh');
+          }
+        }
       } else {
         vscode.commands.executeCommand(command, ...(args || []));
       }

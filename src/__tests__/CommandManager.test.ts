@@ -72,8 +72,8 @@ describe('CommandManager', () => {
     it('should register commands with VS Code', async () => {
       await commandManager.initialize();
 
-      // Should register at least 8 commands (6 new + 2 legacy)
-      expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(8);
+      // Should register at least 9 commands (7 new + 2 legacy)
+      expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(9);
     });
 
     it('should handle multiple initialization calls', async () => {

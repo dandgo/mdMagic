@@ -82,12 +82,16 @@ export class ExtensionController {
     // Register WebviewProvider
     const { WebviewProvider } = require('../providers/WebviewProvider');
     const webviewProvider = new WebviewProvider(this.context);
+    webviewProvider.setExtensionController(this);
     await this.registerComponent(webviewProvider);
 
     // Register StatusBarManager
     const { StatusBarManager } = require('../managers/StatusBarManager');
     const statusBarManager = new StatusBarManager(this.context);
     await this.registerComponent(statusBarManager);
+
+    // Set up component connections
+    this.setupComponentConnections();
 
     this.logInfo('Component registration complete');
   }
@@ -109,6 +113,43 @@ export class ExtensionController {
       this.handleError(error, `Failed to register component ${component.name}`);
       throw error;
     }
+  }
+
+  /**
+   * Set up connections between components
+   */
+  private setupComponentConnections(): void {
+    this.logInfo('Setting up component connections...');
+
+    const documentManager = this.getComponent('document-manager') as any;
+    const webviewProvider = this.getComponent('webviewProvider') as any;
+
+    if (documentManager && webviewProvider) {
+      // Connect document changes to webview updates
+      const documentChangeDisposable = documentManager.addChangeListener((event: any) => {
+        this.logInfo(`Document change event: ${event.type} for ${event.document.uri.fsPath}`);
+        
+        if (event.type === 'external' || event.type === 'content') {
+          // Find webview for this document and update it
+          const documentId = `doc_${Buffer.from(event.document.uri.toString()).toString('base64').replace(/[+/=]/g, '')}`;
+          const panelInfo = webviewProvider.getWebviewByDocumentId(documentId);
+          
+          if (panelInfo) {
+            this.logInfo(`Updating webview content for ${event.document.uri.fsPath}`);
+            
+            panelInfo.panel.webview.postMessage({
+              type: 'setContent',
+              payload: { content: event.document.content }
+            });
+          }
+        }
+      });
+
+      this.disposables.push(documentChangeDisposable);
+      this.context.subscriptions.push(documentChangeDisposable);
+    }
+
+    this.logInfo('Component connections setup complete');
   }
 
   /**

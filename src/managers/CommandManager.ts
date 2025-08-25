@@ -245,6 +245,56 @@ export class CommandManager implements ICommandManager {
       },
     });
 
+    // Refresh Command
+    this.registerCommand({
+      id: 'mdMagic.refresh',
+      title: 'Refresh',
+      category: 'mdMagic',
+      handler: {
+        execute: async (args?: any[]) => {
+          const uri = args?.[0] || vscode.window.activeTextEditor?.document?.uri;
+          if (!uri) {
+            vscode.window.showErrorMessage('No markdown file selected');
+            return;
+          }
+
+          const documentManager = controller?.getComponent('document-manager');
+          const webviewProvider = controller?.getComponent('webviewProvider');
+          
+          if (documentManager && webviewProvider) {
+            try {
+              // Refresh document from disk
+              await documentManager.refreshDocument(uri);
+              
+              // Get updated content
+              const document = await vscode.workspace.openTextDocument(uri);
+              const content = document.getText();
+              
+              // Find active webview for this document
+              const documentId = `doc_${Buffer.from(uri.toString()).toString('base64').replace(/[+/=]/g, '')}`;
+              const panelInfo = webviewProvider.getWebviewByDocumentId(documentId);
+              
+              if (panelInfo) {
+                // Update webview content
+                panelInfo.panel.webview.postMessage({
+                  type: 'setContent',
+                  payload: { content }
+                });
+                
+                vscode.window.showInformationMessage('Document refreshed');
+              }
+            } catch (error) {
+              vscode.window.showErrorMessage(`Failed to refresh: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+          }
+        },
+        canExecute: (args?: any[]) => {
+          const uri = args?.[0] || vscode.window.activeTextEditor?.document?.uri;
+          return uri?.path.endsWith('.md') ?? false;
+        },
+      },
+    });
+
     this.logInfo(`Registered ${this.commands.size} commands`);
   }
 
