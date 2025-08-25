@@ -61,6 +61,12 @@ class MdMagicEditor {
       // Set up keyboard shortcuts
       this.setupKeyboardShortcuts();
       
+      // Set up auto-completion
+      this.setupAutoCompletion();
+      
+      // Enhance table editing
+      this.enhanceTableEditing();
+      
       // Initialize toolbar
       this.setupToolbar();
       
@@ -238,6 +244,40 @@ class MdMagicEditor {
       }
       e.target.value = ''; // Reset selection
     });
+
+    // Smart paste event listener
+    const editorContainer = document.getElementById('monaco-editor');
+    if (editorContainer) {
+      editorContainer.addEventListener('paste', (e) => {
+        this.handleSmartPaste(e);
+      });
+
+      // Drag and drop events
+      editorContainer.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        editorContainer.classList.add('drag-over');
+      });
+
+      editorContainer.addEventListener('drop', (e) => {
+        editorContainer.classList.remove('drag-over');
+        this.handleDragDrop(e);
+      });
+
+      // Prevent default drag behaviors on the entire container
+      editorContainer.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        editorContainer.classList.add('drag-over');
+      });
+
+      editorContainer.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        // Only remove the class if we're leaving the editor container entirely
+        if (!editorContainer.contains(e.relatedTarget)) {
+          editorContainer.classList.remove('drag-over');
+        }
+      });
+    }
   }
 
   /**
@@ -273,6 +313,197 @@ class MdMagicEditor {
     // This is a simplified implementation
     // In a real Monaco integration, this would use monaco.KeyMod and monaco.KeyCode
     return keyString;
+  }
+
+  /**
+   * Set up markdown auto-completion
+   */
+  setupAutoCompletion() {
+    // Register markdown completion provider
+    if (window.monaco && window.monaco.languages) {
+      monaco.languages.registerCompletionItemProvider('markdown', {
+        provideCompletionItems: (model, position) => {
+          const textUntilPosition = model.getValueInRange({
+            startLineNumber: position.lineNumber,
+            startColumn: 1,
+            endLineNumber: position.lineNumber,
+            endColumn: position.column,
+          });
+
+          const suggestions = [];
+
+          // Header completions
+          if (textUntilPosition.match(/^#*$/)) {
+            for (let i = 1; i <= 6; i++) {
+              suggestions.push({
+                label: '#'.repeat(i) + ' Header ' + i,
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: '#'.repeat(i) + ' ${1:Header}',
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: `Insert H${i} header`,
+                range: {
+                  startLineNumber: position.lineNumber,
+                  endLineNumber: position.lineNumber,
+                  startColumn: 1,
+                  endColumn: position.column,
+                }
+              });
+            }
+          }
+
+          // Bold/italic completions
+          if (textUntilPosition.match(/\*$/)) {
+            suggestions.push({
+              label: '**bold**',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: '*${1:bold text}*',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Bold text formatting',
+              range: {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: position.column - 1,
+                endColumn: position.column,
+              }
+            });
+          }
+
+          if (textUntilPosition.match(/\*\*$/)) {
+            suggestions.push({
+              label: '**bold**',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: '${1:bold text}**',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Bold text formatting',
+              range: {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: position.column,
+                endColumn: position.column,
+              }
+            });
+          }
+
+          // Link completions
+          if (textUntilPosition.match(/\[.*\]\($/)) {
+            suggestions.push({
+              label: 'URL link',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: '${1:https://example.com})',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Insert URL for link',
+              range: {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: position.column,
+                endColumn: position.column,
+              }
+            });
+          }
+
+          // Image completions
+          if (textUntilPosition.match(/!\[$/)) {
+            suggestions.push({
+              label: '![alt](url)',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: '${1:alt text}](${2:image-url})',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Insert image',
+              range: {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: position.column,
+                endColumn: position.column,
+              }
+            });
+          }
+
+          // List completions
+          if (textUntilPosition.match(/^[\s]*$/)) {
+            suggestions.push(
+              {
+                label: '- Unordered list',
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: '- ${1:list item}',
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: 'Insert unordered list item',
+                range: {
+                  startLineNumber: position.lineNumber,
+                  endLineNumber: position.lineNumber,
+                  startColumn: 1,
+                  endColumn: position.column,
+                }
+              },
+              {
+                label: '1. Ordered list',
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: '1. ${1:list item}',
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: 'Insert ordered list item',
+                range: {
+                  startLineNumber: position.lineNumber,
+                  endLineNumber: position.lineNumber,
+                  startColumn: 1,
+                  endColumn: position.column,
+                }
+              },
+              {
+                label: '- [ ] Task list',
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: '- [ ] ${1:task}',
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: 'Insert task list item',
+                range: {
+                  startLineNumber: position.lineNumber,
+                  endLineNumber: position.lineNumber,
+                  startColumn: 1,
+                  endColumn: position.column,
+                }
+              }
+            );
+          }
+
+          // Code block completions
+          if (textUntilPosition.match(/```$/)) {
+            const languages = ['javascript', 'typescript', 'python', 'java', 'css', 'html', 'markdown', 'json', 'bash'];
+            languages.forEach(lang => {
+              suggestions.push({
+                label: `\`\`\`${lang}`,
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: `${lang}\n\${1:code}\n\`\`\``,
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: `Insert ${lang} code block`,
+                range: {
+                  startLineNumber: position.lineNumber,
+                  endLineNumber: position.lineNumber,
+                  startColumn: position.column,
+                  endColumn: position.column,
+                }
+              });
+            });
+          }
+
+          // Table completion
+          if (textUntilPosition.match(/^\|?[\s]*$/)) {
+            suggestions.push({
+              label: 'Table',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: '| ${1:Header 1} | ${2:Header 2} | ${3:Header 3} |\n| --- | --- | --- |\n| ${4:Cell 1} | ${5:Cell 2} | ${6:Cell 3} |',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Insert table',
+              range: {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: 1,
+                endColumn: position.column,
+              }
+            });
+          }
+
+          return { suggestions };
+        }
+      });
+    }
   }
 
   /**
@@ -683,6 +914,157 @@ class MdMagicEditor {
   }
 
   /**
+   * Enhanced table navigation and editing
+   */
+  enhanceTableEditing() {
+    if (!this.editor) {return;}
+
+    // Add table navigation shortcuts
+    this.editor.addAction({
+      id: 'table-navigate-next',
+      label: 'Navigate to Next Table Cell',
+      keybindings: [9], // Tab key
+      contextMenuGroupId: 'navigation',
+      run: (editor) => {
+        if (this.isInTable()) {
+          this.navigateTableCell('next');
+          return true;
+        }
+        return false;
+      }
+    });
+
+    this.editor.addAction({
+      id: 'table-navigate-prev',
+      label: 'Navigate to Previous Table Cell',
+      keybindings: [2073], // Shift+Tab
+      contextMenuGroupId: 'navigation',
+      run: (editor) => {
+        if (this.isInTable()) {
+          this.navigateTableCell('prev');
+          return true;
+        }
+        return false;
+      }
+    });
+
+    this.editor.addAction({
+      id: 'table-add-row',
+      label: 'Add Table Row',
+      keybindings: [2080], // Ctrl+Shift+Enter
+      contextMenuGroupId: 'table',
+      run: (editor) => {
+        if (this.isInTable()) {
+          this.addTableRow();
+          return true;
+        }
+        return false;
+      }
+    });
+  }
+
+  /**
+   * Check if cursor is in a table
+   */
+  isInTable() {
+    if (!this.editor) {return false;}
+
+    const position = this.editor.getPosition();
+    const model = this.editor.getModel();
+    const lineContent = model.getLineContent(position.lineNumber);
+    
+    return lineContent.includes('|');
+  }
+
+  /**
+   * Navigate table cells
+   */
+  navigateTableCell(direction) {
+    if (!this.editor) {return;}
+
+    const position = this.editor.getPosition();
+    const model = this.editor.getModel();
+    const lineContent = model.getLineContent(position.lineNumber);
+    
+    const cells = lineContent.split('|').map(cell => cell.trim());
+    const currentColumn = position.column;
+    
+    // Find current cell index
+    let cellStart = 0;
+    let currentCellIndex = 0;
+    
+    for (let i = 0; i < cells.length; i++) {
+      const cellEnd = cellStart + cells[i].length + 1; // +1 for the |
+      if (currentColumn >= cellStart && currentColumn <= cellEnd) {
+        currentCellIndex = i;
+        break;
+      }
+      cellStart = cellEnd;
+    }
+    
+    if (direction === 'next') {
+      // Move to next cell or next row
+      if (currentCellIndex < cells.length - 1) {
+        const nextCellStart = cellStart + cells[currentCellIndex].length + 2; // +2 for | and space
+        this.editor.setPosition({ lineNumber: position.lineNumber, column: nextCellStart });
+      } else {
+        // Move to first cell of next row
+        const nextLine = position.lineNumber + 1;
+        if (nextLine <= model.getLineCount()) {
+          const nextLineContent = model.getLineContent(nextLine);
+          if (nextLineContent.includes('|')) {
+            this.editor.setPosition({ lineNumber: nextLine, column: 2 }); // After first |
+          }
+        }
+      }
+    } else if (direction === 'prev') {
+      // Move to previous cell or previous row
+      if (currentCellIndex > 0) {
+        const prevCellEnd = cellStart - 1;
+        this.editor.setPosition({ lineNumber: position.lineNumber, column: prevCellEnd });
+      } else {
+        // Move to last cell of previous row
+        const prevLine = position.lineNumber - 1;
+        if (prevLine >= 1) {
+          const prevLineContent = model.getLineContent(prevLine);
+          if (prevLineContent.includes('|')) {
+            const prevCells = prevLineContent.split('|');
+            const lastCellStart = prevLineContent.lastIndexOf('|', prevLineContent.length - 2);
+            this.editor.setPosition({ lineNumber: prevLine, column: lastCellStart - 1 });
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Add a new row to the table
+   */
+  addTableRow() {
+    if (!this.editor) {return;}
+
+    const position = this.editor.getPosition();
+    const model = this.editor.getModel();
+    const lineContent = model.getLineContent(position.lineNumber);
+    
+    // Count columns in current row
+    const cells = lineContent.split('|').filter(cell => cell.trim().length > 0);
+    const numCols = cells.length;
+    
+    // Generate new row
+    const newRow = '| ' + Array(numCols).fill('Cell').join(' | ') + ' |';
+    
+    // Insert new row after current line
+    this.editor.executeEdits('add-table-row', [{
+      range: new monaco.Range(position.lineNumber, lineContent.length + 1, position.lineNumber, lineContent.length + 1),
+      text: '\n' + newRow
+    }]);
+    
+    // Move cursor to first cell of new row
+    this.editor.setPosition({ lineNumber: position.lineNumber + 1, column: 3 });
+  }
+
+  /**
    * Toggle preview panel
    */
   togglePreview() {
@@ -726,12 +1108,144 @@ class MdMagicEditor {
     const btn = document.getElementById('btn-wysiwyg');
     btn.classList.toggle('active', this.isWysiwygMode);
     
-    // For now, WYSIWYG just shows the preview
-    if (this.isWysiwygMode && this.previewMode === 'off') {
-      this.togglePreview();
+    if (this.isWysiwygMode) {
+      // Enable enhanced WYSIWYG mode
+      this.enableWysiwygFeatures();
+      
+      // Show preview if not already visible
+      if (this.previewMode === 'off') {
+        this.togglePreview();
+      }
+    } else {
+      // Disable enhanced WYSIWYG mode
+      this.disableWysiwygFeatures();
     }
     
     this.updatePreview();
+  }
+
+  /**
+   * Enable enhanced WYSIWYG features
+   */
+  enableWysiwygFeatures() {
+    // Add WYSIWYG styling to editor container
+    const editorContainer = document.getElementById('monaco-editor');
+    if (editorContainer) {
+      editorContainer.classList.add('wysiwyg-mode');
+    }
+
+    // Enable real-time preview updates with shorter delay
+    this._originalUpdateDelay = this.autoSaveDelay;
+    this.autoSaveDelay = 100; // Faster updates for WYSIWYG
+
+    // Add enhanced cursor position tracking for live preview
+    if (this.editor && this.editor.onDidChangeCursorPosition) {
+      this._wysiwygCursorHandler = this.editor.onDidChangeCursorPosition(() => {
+        // Sync scroll position between editor and preview
+        this.syncScrollPosition();
+      });
+    }
+
+    // Enhanced formatting button state updates
+    if (this.editor && this.editor.onDidChangeModelContent) {
+      this._wysiwygContentHandler = this.editor.onDidChangeModelContent(() => {
+        // Update preview with animation
+        this.updatePreviewWithAnimation();
+        
+        // Update toolbar button states more frequently
+        this.updateToolbarButtonStates();
+      });
+    }
+  }
+
+  /**
+   * Disable enhanced WYSIWYG features
+   */
+  disableWysiwygFeatures() {
+    // Remove WYSIWYG styling
+    const editorContainer = document.getElementById('monaco-editor');
+    if (editorContainer) {
+      editorContainer.classList.remove('wysiwyg-mode');
+    }
+
+    // Restore original update delay
+    if (this._originalUpdateDelay) {
+      this.autoSaveDelay = this._originalUpdateDelay;
+    }
+
+    // Dispose enhanced event handlers
+    if (this._wysiwygCursorHandler) {
+      this._wysiwygCursorHandler.dispose();
+      this._wysiwygCursorHandler = null;
+    }
+
+    if (this._wysiwygContentHandler) {
+      this._wysiwygContentHandler.dispose();
+      this._wysiwygContentHandler = null;
+    }
+  }
+
+  /**
+   * Sync scroll position between editor and preview
+   */
+  syncScrollPosition() {
+    if (!this.isWysiwygMode || this.previewMode === 'off') {
+      return;
+    }
+
+    const previewPanel = document.getElementById('preview-panel');
+    if (!previewPanel || !this.editor) {
+      return;
+    }
+
+    try {
+      // Get current editor scroll position
+      const editorScrollTop = this.editor.getScrollTop();
+      const editorScrollHeight = this.editor.getScrollHeight();
+      const editorViewHeight = this.editor.getLayoutInfo().height;
+
+      // Calculate scroll ratio
+      const scrollRatio = editorScrollTop / (editorScrollHeight - editorViewHeight);
+
+      // Apply to preview panel
+      const previewScrollHeight = previewPanel.scrollHeight - previewPanel.clientHeight;
+      previewPanel.scrollTop = scrollRatio * previewScrollHeight;
+    } catch (error) {
+      console.warn('Error syncing scroll position:', error);
+    }
+  }
+
+  /**
+   * Update preview with animation
+   */
+  updatePreviewWithAnimation() {
+    if (this.previewMode === 'off') {
+      return;
+    }
+
+    const previewContent = document.getElementById('preview-content');
+    if (!previewContent) {
+      return;
+    }
+
+    // Add fade effect for smooth updates
+    previewContent.style.transition = 'opacity 0.1s ease-in-out';
+    previewContent.style.opacity = '0.8';
+
+    // Update content
+    const content = this.editor.getValue();
+    try {
+      const html = this.markdownToHtml(content);
+      previewContent.innerHTML = html;
+    } catch (error) {
+      console.error('Error updating preview:', error);
+      previewContent.innerHTML = '<p>Error rendering preview</p>';
+    }
+
+    // Restore opacity
+    setTimeout(() => {
+      previewContent.style.opacity = '1';
+    }, 50);
   }
 
   /**
@@ -952,6 +1466,191 @@ class MdMagicEditor {
         overlay.remove();
       }
     });
+  }
+
+  /**
+   * Convert HTML to Markdown (Smart Paste functionality)
+   */
+  convertHTMLToMarkdown(html) {
+    // Remove extra whitespace and normalize
+    html = html.trim().replace(/\s+/g, ' ');
+    
+    // Convert common HTML elements to markdown
+    let markdown = html;
+    
+    // Headers (h1-h6)
+    markdown = markdown.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
+    markdown = markdown.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
+    markdown = markdown.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
+    markdown = markdown.replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n\n');
+    markdown = markdown.replace(/<h5[^>]*>(.*?)<\/h5>/gi, '##### $1\n\n');
+    markdown = markdown.replace(/<h6[^>]*>(.*?)<\/h6>/gi, '###### $1\n\n');
+    
+    // Bold and italic
+    markdown = markdown.replace(/<(strong|b)[^>]*>(.*?)<\/(strong|b)>/gi, '**$2**');
+    markdown = markdown.replace(/<(em|i)[^>]*>(.*?)<\/(em|i)>/gi, '*$2*');
+    
+    // Links
+    markdown = markdown.replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
+    
+    // Images
+    markdown = markdown.replace(/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>/gi, '![$2]($1)');
+    markdown = markdown.replace(/<img[^>]*alt="([^"]*)"[^>]*src="([^"]*)"[^>]*>/gi, '![$1]($2)');
+    markdown = markdown.replace(/<img[^>]*src="([^"]*)"[^>]*>/gi, '![]($1)');
+    
+    // Code blocks and inline code
+    markdown = markdown.replace(/<pre[^>]*><code[^>]*>(.*?)<\/code><\/pre>/gis, '```\n$1\n```\n\n');
+    markdown = markdown.replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`');
+    
+    // Lists
+    markdown = markdown.replace(/<ul[^>]*>(.*?)<\/ul>/gis, (match, content) => {
+      const items = content.replace(/<li[^>]*>(.*?)<\/li>/gis, '- $1\n');
+      return items + '\n';
+    });
+    
+    markdown = markdown.replace(/<ol[^>]*>(.*?)<\/ol>/gis, (match, content) => {
+      let counter = 1;
+      const items = content.replace(/<li[^>]*>(.*?)<\/li>/gis, () => {
+        return `${counter++}. $1\n`;
+      });
+      return items + '\n';
+    });
+    
+    // Blockquotes
+    markdown = markdown.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gis, '> $1\n\n');
+    
+    // Paragraphs
+    markdown = markdown.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
+    
+    // Line breaks
+    markdown = markdown.replace(/<br\s*\/?>/gi, '\n');
+    
+    // Remove remaining HTML tags
+    markdown = markdown.replace(/<[^>]*>/g, '');
+    
+    // Decode HTML entities
+    markdown = markdown.replace(/&amp;/g, '&');
+    markdown = markdown.replace(/&lt;/g, '<');
+    markdown = markdown.replace(/&gt;/g, '>');
+    markdown = markdown.replace(/&quot;/g, '"');
+    markdown = markdown.replace(/&#39;/g, "'");
+    markdown = markdown.replace(/&nbsp;/g, ' ');
+    
+    // Clean up extra newlines
+    markdown = markdown.replace(/\n{3,}/g, '\n\n');
+    markdown = markdown.trim();
+    
+    return markdown;
+  }
+
+  /**
+   * Handle smart paste functionality
+   */
+  handleSmartPaste(event) {
+    const clipboardData = event.clipboardData || window.clipboardData;
+    
+    if (!clipboardData) {
+      return false; // Let default paste behavior happen
+    }
+    
+    // Check if there's HTML content
+    const htmlData = clipboardData.getData('text/html');
+    const textData = clipboardData.getData('text/plain');
+    
+    if (htmlData && htmlData.trim()) {
+      // Convert HTML to markdown
+      const markdown = this.convertHTMLToMarkdown(htmlData);
+      
+      // Only use converted markdown if it's meaningfully different from plain text
+      if (markdown && markdown !== textData && markdown.length > 0) {
+        event.preventDefault();
+        
+        // Insert the converted markdown
+        const position = this.editor.getPosition();
+        this.editor.executeEdits('smart-paste', [{
+          range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+          text: markdown
+        }]);
+        
+        // Update cursor position
+        const lines = markdown.split('\n');
+        const newLineNumber = position.lineNumber + lines.length - 1;
+        const newColumn = lines.length === 1 ? position.column + markdown.length : lines[lines.length - 1].length + 1;
+        
+        this.editor.setPosition({ lineNumber: newLineNumber, column: newColumn });
+        this.editor.focus();
+        
+        return true; // Indicate that we handled the paste
+      }
+    }
+    
+    return false; // Let default paste behavior happen
+  }
+
+  /**
+   * Handle drag and drop for images
+   */
+  handleDragDrop(event) {
+    event.preventDefault();
+    
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+    
+    for (const file of files) {
+      if (file.type.startsWith('image/')) {
+        this.insertImageFile(file, event);
+      }
+    }
+  }
+
+  /**
+   * Insert image file into editor
+   */
+  async insertImageFile(file, event) {
+    try {
+      // Create a data URL for the image
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        const fileName = file.name;
+        
+        // Create markdown image syntax
+        const imageMarkdown = `![${fileName}](${dataUrl})`;
+        
+        // Get cursor position from drop event or use current position
+        let position = this.editor.getPosition();
+        
+        if (event && event.clientX && event.clientY) {
+          // Try to get position from mouse coordinates
+          const editorPosition = this.editor.getPositionAt(event.clientX, event.clientY);
+          if (editorPosition) {
+            position = editorPosition;
+          }
+        }
+        
+        // Insert the image
+        this.editor.executeEdits('image-drop', [{
+          range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+          text: imageMarkdown
+        }]);
+        
+        // Update cursor position
+        const newColumn = position.column + imageMarkdown.length;
+        this.editor.setPosition({ lineNumber: position.lineNumber, column: newColumn });
+        this.editor.focus();
+        
+        // Update preview if active
+        this.updatePreview();
+      };
+      
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error inserting image:', error);
+      this.showError('Failed to insert image: ' + error.message);
+    }
   }
 
   /**
