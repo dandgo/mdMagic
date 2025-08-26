@@ -32,6 +32,7 @@ export interface WebviewState {
   scrollPosition?: number;
   isDirty: boolean;
   lastModified: Date;
+  documentUri?: string; // Store URI for better document synchronization
 }
 
 export interface WebviewOptions {

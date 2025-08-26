@@ -3,17 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' 'self'; script-src 'unsafe-inline' 'unsafe-eval' 'self'; img-src 'self' data: blob:; connect-src 'self';">
     <title>mdMagic Editor</title>
     <link rel="stylesheet" href="styles/editor.css">
+    <style>
+        /* Fallback styles to ensure basic visibility */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #1e1e1e;
+            color: #cccccc;
+        }
+        
+        #toolbar {
+            min-height: 40px;
+            background-color: #2d2d30;
+            border-bottom: 1px solid #3e3e42;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+        }
+        
+        #editor-container {
+            flex: 1;
+            display: flex;
+            background-color: #1e1e1e;
+        }
+        
+        #monaco-editor {
+            flex: 1;
+            min-height: 300px;
+            background-color: #1e1e1e;
+        }
+        
+        #status {
+            height: 24px;
+            background-color: #007acc;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            font-size: 12px;
+        }
+        
+        .status-left {
+            flex: 1;
+        }
+        
+        .status-right {
+            margin-left: auto;
+        }
+    </style>
 </head>
 <body>
     <div id="toolbar">
+        <span id="toolbar-loading" style="color: #cccccc;">Loading toolbar...</span>
         <!-- Toolbar content will be dynamically generated -->
     </div>
     
     <div id="editor-container">
-        <div id="monaco-editor"></div>
+        <div id="monaco-editor">
+            <div id="editor-loading" style="padding: 20px; color: #cccccc;">Loading editor...</div>
+        </div>
         <!-- Preview panel will be dynamically added -->
     </div>
     
@@ -23,7 +78,1181 @@
     </div>
 
     <!-- Scripts -->
-    <script src="scripts/monaco-loader.js"></script>
-    <script src="scripts/editor.js"></script>
+    <script>
+        console.log('=== HTML Scripts Section Starting ===');
+        
+        // Set up immediate fallback editor after 3 seconds
+        let fallbackActivated = false;
+        
+        function activateFallbackEditor() {
+            if (fallbackActivated || window.mdMagicEditorInitialized) return;
+            fallbackActivated = true;
+            
+            console.log('=== ACTIVATING FALLBACK EDITOR ===');
+            
+            // Initialize VS Code API
+            if (typeof acquireVsCodeApi !== 'undefined') {
+                window.vscode = acquireVsCodeApi();
+                console.log('=== FALLBACK: VS Code API acquired ===');
+                
+                // Tell extension we're ready
+                setTimeout(() => {
+                    window.vscode.postMessage({
+                        type: 'webviewReady',
+                        payload: {}
+                    });
+                    console.log('=== FALLBACK: Sent webviewReady message ===');
+                }, 100);
+            }
+            
+            // Set up enhanced toolbar
+            const toolbar = document.getElementById('toolbar');
+            if (toolbar) {
+                toolbar.innerHTML = `
+                    <div style="color: #cccccc; padding: 8px; background: #2d2d30; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                        <strong>mdMagic Editor</strong>
+                        <button onclick="toggleMode()" id="mode-toggle" style="padding: 4px 8px; background: #0e639c; color: white; border: none; border-radius: 2px;">WYSIWYG</button>
+                        <button onclick="togglePreview()" style="padding: 4px 8px; background: #0e639c; color: white; border: none; border-radius: 2px;">Toggle Preview</button>
+                        
+                        <!-- Text Formatting -->
+                        <div style="display: flex; gap: 2px; margin-left: 8px; border-right: 1px solid #555; padding-right: 8px;">
+                            <button onclick="formatText('bold')" title="Bold" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px; font-weight: bold;">B</button>
+                            <button onclick="formatText('italic')" title="Italic" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px; font-style: italic;">I</button>
+                            <button onclick="formatText('strikethrough')" title="Strikethrough" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px; text-decoration: line-through;">S</button>
+                            <button onclick="formatText('underline')" title="Underline" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px; text-decoration: underline;">U</button>
+                        </div>
+                        
+                        <!-- Headers -->
+                        <div style="display: flex; gap: 2px; border-right: 1px solid #555; padding-right: 8px;">
+                            <select onchange="formatText('heading', this.value)" style="padding: 2px; background: #3c3c3c; color: white; border: none; border-radius: 2px;">
+                                <option value="">Header</option>
+                                <option value="1">H1</option>
+                                <option value="2">H2</option>
+                                <option value="3">H3</option>
+                                <option value="4">H4</option>
+                                <option value="5">H5</option>
+                                <option value="6">H6</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Code -->
+                        <div style="display: flex; gap: 2px; border-right: 1px solid #555; padding-right: 8px;">
+                            <button onclick="formatText('code')" title="Inline Code" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px; font-family: monospace;">\`</button>
+                            <button onclick="formatText('codeblock')" title="Code Block" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px; font-family: monospace;">{\`}</button>
+                        </div>
+                        
+                        <!-- Lists -->
+                        <div style="display: flex; gap: 2px; border-right: 1px solid #555; padding-right: 8px;">
+                            <button onclick="formatText('bulletlist')" title="Bullet List" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px;">•</button>
+                            <button onclick="formatText('numberlist')" title="Numbered List" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px;">1.</button>
+                            <button onclick="formatText('checklist')" title="Checklist" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px;">☑</button>
+                        </div>
+                        
+                        <!-- Links & Media -->
+                        <div style="display: flex; gap: 2px; border-right: 1px solid #555; padding-right: 8px;">
+                            <button onclick="formatText('link')" title="Link" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px;">🔗</button>
+                            <button onclick="formatText('image')" title="Image" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px;">🖼️</button>
+                        </div>
+                        
+                        <!-- Advanced -->
+                        <div style="display: flex; gap: 2px; border-right: 1px solid #555; padding-right: 8px;">
+                            <button onclick="formatText('quote')" title="Blockquote" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px;">"</button>
+                            <button onclick="formatText('table')" title="Table" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px;">⊞</button>
+                            <button onclick="formatText('hr')" title="Horizontal Rule" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px;">―</button>
+                        </div>
+                        
+                        <!-- Extended Formatting -->
+                        <div style="display: flex; gap: 2px; border-right: 1px solid #555; padding-right: 8px;">
+                            <button onclick="formatText('highlight')" title="Highlight" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px; background-color: #ffeb3b; color: #000;">H</button>
+                            <button onclick="formatText('superscript')" title="Superscript" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px;">x²</button>
+                            <button onclick="formatText('subscript')" title="Subscript" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px;">x₂</button>
+                        </div>
+                        
+                        <!-- Special Elements -->
+                        <div style="display: flex; gap: 2px; border-right: 1px solid #555; padding-right: 8px;">
+                            <button onclick="formatText('footnote')" title="Footnote" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px;">¹</button>
+                            <button onclick="formatText('keyboard')" title="Keyboard Key" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px; font-family: monospace;">⌘</button>
+                            <button onclick="formatText('definition')" title="Definition List" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px;">Def</button>
+                        </div>
+                        
+                        <!-- Help -->
+                        <div style="display: flex; gap: 2px;">
+                            <button onclick="showShortcuts()" title="Keyboard Shortcuts" style="padding: 4px 6px; background: #3c3c3c; color: white; border: none; border-radius: 2px;">?</button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Set up dual-mode editor
+            const container = document.getElementById('monaco-editor');
+            if (container) {
+                container.innerHTML = `
+                    <!-- Markdown Mode -->
+                    <textarea id="markdown-editor" 
+                        style="width: 100%; height: 100%; background: #1e1e1e; color: #cccccc; 
+                               border: none; padding: 15px; font-family: 'Courier New', monospace; 
+                               font-size: 14px; resize: none; outline: none; display: block;"
+                        placeholder="# Welcome to mdMagic Editor
+
+Start typing your markdown here...
+
+**Bold text**
+*Italic text*
+- List item
+- Another item
+
+[Link](https://example.com)
+\`code\`"></textarea>
+                
+                    <!-- WYSIWYG Mode -->
+                    <div id="wysiwyg-editor" contenteditable="true"
+                        style="width: 100%; height: 100%; background: #1e1e1e; color: #cccccc; 
+                               border: none; padding: 15px; font-family: 'Segoe UI', sans-serif; 
+                               font-size: 14px; outline: none; overflow-y: auto; display: none;">
+                        <p>Loading content...</p>
+                    </div>
+                `;
+                
+                // Add functionality
+                const markdownEditor = document.getElementById('markdown-editor');
+                const wysiwygEditor = document.getElementById('wysiwyg-editor');
+                
+                if (markdownEditor) {
+                    markdownEditor.addEventListener('input', updatePreviewContent);
+                }
+                
+                if (wysiwygEditor) {
+                    wysiwygEditor.addEventListener('input', syncWysiwygToMarkdown);
+                }
+                
+                // Add drag and drop support
+                addDragDropSupport();
+                
+                // Add keyboard shortcuts
+                addKeyboardShortcuts();
+            }
+            
+            // Set up enhanced preview panel
+            const editorContainer = document.getElementById('editor-container');
+            if (editorContainer && !document.getElementById('preview-panel')) {
+                const previewPanel = document.createElement('div');
+                previewPanel.id = 'preview-panel';
+                previewPanel.style.cssText = `
+                    width: 0%; height: 100%; border-left: 1px solid #3e3e42;
+                    background-color: #1e1e1e; overflow-y: auto; padding: 20px;
+                    display: none; transition: width 0.3s ease; font-family: 'Segoe UI', sans-serif;
+                `;
+                previewPanel.innerHTML = `
+                    <div id="preview-content" style="
+                        color: #cccccc; line-height: 1.6; max-width: none;
+                    ">
+                        <h3 style="color: #4fc1ff; margin-top: 0;">📝 Markdown Preview</h3>
+                        <p>Start typing to see your markdown rendered here...</p>
+                        <p><em>This preview updates in real-time as you type!</em></p>
+                    </div>
+                    <style>
+                        #preview-content h1, #preview-content h2, #preview-content h3, #preview-content h4 {
+                            color: #4fc1ff; margin-top: 24px; margin-bottom: 12px;
+                        }
+                        #preview-content h1 { font-size: 2em; border-bottom: 1px solid #3e3e42; padding-bottom: 8px; }
+                        #preview-content h2 { font-size: 1.5em; }
+                        #preview-content h3 { font-size: 1.25em; }
+                        #preview-content h4 { font-size: 1.1em; }
+                        #preview-content p { margin: 12px 0; }
+                        #preview-content ul, #preview-content ol { margin: 12px 0; padding-left: 24px; }
+                        #preview-content li { margin: 4px 0; }
+                        #preview-content blockquote {
+                            border-left: 4px solid #007acc; margin: 16px 0; padding: 8px 16px;
+                            background: rgba(0, 122, 204, 0.1); border-radius: 0 4px 4px 0;
+                        }
+                        #preview-content code {
+                            background: #2d2d30 !important; padding: 2px 6px !important;
+                            border-radius: 3px !important; color: #ce9178 !important;
+                            font-family: 'Courier New', monospace !important;
+                        }
+                        #preview-content pre {
+                            background: #2d2d30; padding: 16px; border-radius: 6px;
+                            overflow-x: auto; margin: 16px 0;
+                        }
+                        #preview-content pre code {
+                            background: none !important; padding: 0 !important;
+                        }
+                        #preview-content a {
+                            color: #4fc1ff !important; text-decoration: underline !important;
+                        }
+                        #preview-content a:hover {
+                            color: #75beff !important;
+                        }
+                        #preview-content table {
+                            border-collapse: collapse; width: 100%; margin: 16px 0;
+                        }
+                        #preview-content th, #preview-content td {
+                            border: 1px solid #3e3e42; padding: 8px 12px; text-align: left;
+                        }
+                        #preview-content th {
+                            background: #2d2d30; font-weight: bold;
+                        }
+                        #preview-content img {
+                            max-width: 100%; height: auto; border-radius: 4px;
+                            margin: 8px 0;
+                        }
+                        #preview-content hr {
+                            border: none; border-top: 1px solid #3e3e42;
+                            margin: 24px 0;
+                        }
+                        #preview-content mark {
+                            background: #ffeb3b !important; color: #000 !important;
+                            padding: 1px 2px !important;
+                        }
+                        #preview-content kbd {
+                            background: #2d2d30 !important; border: 1px solid #555 !important;
+                            border-radius: 3px !important; padding: 2px 6px !important;
+                            font-family: monospace !important; font-size: 0.9em !important;
+                        }
+                        #preview-content dl {
+                            margin: 16px 0 !important;
+                        }
+                        #preview-content dt {
+                            font-weight: bold !important; margin-bottom: 4px !important;
+                            color: #4fc1ff !important;
+                        }
+                        #preview-content dd {
+                            margin-left: 20px !important; margin-bottom: 8px !important;
+                        }
+                        #preview-content sup {
+                            font-size: 0.8em !important; vertical-align: super !important;
+                        }
+                        #preview-content sub {
+                            font-size: 0.8em !important; vertical-align: sub !important;
+                        }
+                    </style>
+                `;
+                editorContainer.appendChild(previewPanel);
+            }
+            
+            // Update status
+            const status = document.getElementById('status');
+            if (status) {
+                status.innerHTML = `
+                    <div class="status-left">Basic Editor Ready</div>
+                    <div class="status-right">Fallback Mode</div>
+                `;
+            }
+        }
+        
+        // Comprehensive markdown to HTML converter
+        function simpleMarkdownToHtml(markdown) {
+            if (!markdown) return '';
+            
+            let html = markdown;
+            
+            // Pre-process: Handle code blocks first (to avoid processing content inside them)
+            html = html.replace(/```(\w+)?\n?([\s\S]*?)```/g, '<pre><code class="language-$1" data-lang="$1">$2</code></pre>');
+            
+            // Tables (must be before other processing)
+            html = html.replace(/^\|(.+)\|\r?\n\|[-:\s|]+\|\r?\n((?:\|.+\|\r?\n?)*)/gm, function(match, header, body) {
+                let tableHtml = '<table style="border-collapse: collapse; width: 100%; margin: 16px 0;">';
+                
+                // Header
+                const headerCells = header.split('|').map(cell => cell.trim()).filter(cell => cell);
+                tableHtml += '<thead><tr>';
+                headerCells.forEach(cell => {
+                    tableHtml += `<th style="border: 1px solid #3e3e42; padding: 8px 12px; background: #2d2d30; text-align: left;">${cell}</th>`;
+                });
+                tableHtml += '</tr></thead>';
+                
+                // Body
+                const rows = body.trim().split('\n').filter(row => row.trim());
+                if (rows.length > 0) {
+                    tableHtml += '<tbody>';
+                    rows.forEach(row => {
+                        const cells = row.split('|').map(cell => cell.trim()).filter(cell => cell);
+                        tableHtml += '<tr>';
+                        cells.forEach(cell => {
+                            tableHtml += `<td style="border: 1px solid #3e3e42; padding: 8px 12px;">${cell}</td>`;
+                        });
+                        tableHtml += '</tr>';
+                    });
+                    tableHtml += '</tbody>';
+                }
+                
+                tableHtml += '</table>';
+                return tableHtml;
+            });
+            
+            // Headers (with anchor support)
+            html = html.replace(/^#{6}\s+(.+)$/gm, '<h6 style="color: #4fc1ff; margin: 18px 0 10px 0; font-size: 0.9em;">$1</h6>');
+            html = html.replace(/^#{5}\s+(.+)$/gm, '<h5 style="color: #4fc1ff; margin: 20px 0 10px 0; font-size: 1em;">$1</h5>');
+            html = html.replace(/^#{4}\s+(.+)$/gm, '<h4 style="color: #4fc1ff; margin: 22px 0 12px 0; font-size: 1.1em;">$1</h4>');
+            html = html.replace(/^#{3}\s+(.+)$/gm, '<h3 style="color: #4fc1ff; margin: 24px 0 12px 0; font-size: 1.25em;">$1</h3>');
+            html = html.replace(/^#{2}\s+(.+)$/gm, '<h2 style="color: #4fc1ff; margin: 26px 0 14px 0; font-size: 1.5em;">$1</h2>');
+            html = html.replace(/^#{1}\s+(.+)$/gm, '<h1 style="color: #4fc1ff; margin: 28px 0 16px 0; font-size: 2em; border-bottom: 1px solid #3e3e42; padding-bottom: 8px;">$1</h1>');
+            
+            // Alternative header syntax
+            html = html.replace(/^(.+)\n=+$/gm, '<h1 style="color: #4fc1ff; margin: 28px 0 16px 0; font-size: 2em; border-bottom: 1px solid #3e3e42; padding-bottom: 8px;">$1</h1>');
+            html = html.replace(/^(.+)\n-+$/gm, '<h2 style="color: #4fc1ff; margin: 26px 0 14px 0; font-size: 1.5em;">$1</h2>');
+            
+            // Bold and Italic (order matters)
+            html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+            html = html.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            html = html.replace(/_(.+?)_/g, '<em>$1</em>');
+            
+            // Strikethrough
+            html = html.replace(/~~(.+?)~~/g, '<del style="color: #999;">$1</del>');
+            
+            // Superscript and Subscript (extended markdown)
+            html = html.replace(/\^(.+?)\^/g, '<sup>$1</sup>');
+            html = html.replace(/~(.+?)~/g, '<sub>$1</sub>');
+            
+            // Highlight (extended markdown)
+            html = html.replace(/==(.+?)==/g, '<mark style="background: #ffeb3b; color: #000; padding: 1px 2px;">$1</mark>');
+            
+            // Inline code
+            html = html.replace(/`([^`]+)`/g, '<code style="background: #2d2d30; padding: 2px 6px; border-radius: 3px; color: #ce9178; font-family: \'Courier New\', monospace;">$1</code>');
+            
+            // Links with title support
+            html = html.replace(/\[([^\]]+)\]\(([^)]+)\s+"([^"]+)"\)/g, '<a href="$2" title="$3" style="color: #4fc1ff; text-decoration: underline;">$1</a>');
+            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color: #4fc1ff; text-decoration: underline;">$1</a>');
+            
+            // Reference links
+            html = html.replace(/\[([^\]]+)\]\[([^\]]+)\]/g, '<a href="#ref-$2" style="color: #4fc1ff; text-decoration: underline;">$1</a>');
+            
+            // Images with title support
+            html = html.replace(/!\[([^\]]*)\]\(([^)]+)\s+"([^"]+)"\)/g, '<img src="$2" alt="$1" title="$3" style="max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0;">');
+            html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0;">');
+            
+            // Task lists (checkboxes)
+            html = html.replace(/^\s*-\s+\[x\]\s+(.+)/gim, '<li style="list-style: none; margin: 4px 0;"><input type="checkbox" checked disabled style="margin-right: 8px;"> $1</li>');
+            html = html.replace(/^\s*-\s+\[\s\]\s+(.+)/gim, '<li style="list-style: none; margin: 4px 0;"><input type="checkbox" disabled style="margin-right: 8px;"> $1</li>');
+            html = html.replace(/^\s*\*\s+\[x\]\s+(.+)/gim, '<li style="list-style: none; margin: 4px 0;"><input type="checkbox" checked disabled style="margin-right: 8px;"> $1</li>');
+            html = html.replace(/^\s*\*\s+\[\s\]\s+(.+)/gim, '<li style="list-style: none; margin: 4px 0;"><input type="checkbox" disabled style="margin-right: 8px;"> $1</li>');
+            
+            // Lists - Unordered (various bullets)
+            html = html.replace(/^\s*[-*+]\s+(.+)/gim, '<li style="margin: 4px 0;">$1</li>');
+            
+            // Lists - Ordered
+            html = html.replace(/^\s*\d+\.\s+(.+)/gim, '<li style="margin: 4px 0;">$1</li>');
+            
+            // Wrap consecutive list items
+            html = html.replace(/(<li[^>]*>.*<\/li>[\s\n]*)+/gs, function(match) {
+                if (match.includes('checkbox')) {
+                    return '<ul style="margin: 12px 0; padding-left: 0; list-style: none;">' + match + '</ul>';
+                } else {
+                    return '<ul style="margin: 12px 0; padding-left: 24px;">' + match + '</ul>';
+                }
+            });
+            
+            // Blockquotes (nested support)
+            html = html.replace(/^>{2,}\s+(.+)/gim, function(match, content, offset, string) {
+                const level = match.match(/^>+/)[0].length;
+                const indent = level * 16;
+                return `<blockquote style="border-left: 4px solid #007acc; margin: 8px 0; padding: 8px 16px; margin-left: ${indent}px; background: rgba(0, 122, 204, 0.1);">${content}</blockquote>`;
+            });
+            html = html.replace(/^>\s+(.+)/gim, '<blockquote style="border-left: 4px solid #007acc; margin: 16px 0; padding: 8px 16px; background: rgba(0, 122, 204, 0.1); border-radius: 0 4px 4px 0;">$1</blockquote>');
+            
+            // Footnotes
+            html = html.replace(/\[\^(\w+)\]/g, '<sup><a href="#fn-$1" style="color: #4fc1ff; text-decoration: none;">$1</a></sup>');
+            
+            // Definition lists
+            html = html.replace(/^(.+)\n:\s+(.+)/gm, '<dl><dt style="font-weight: bold; margin-bottom: 4px; color: #4fc1ff;">$1</dt><dd style="margin-left: 20px; margin-bottom: 8px;">$2</dd></dl>');
+            
+            // Keyboard keys
+            html = html.replace(/<kbd>(.*?)<\/kbd>/g, '<kbd style="background: #2d2d30; border: 1px solid #555; border-radius: 3px; padding: 2px 6px; font-family: monospace; font-size: 0.9em;">$1</kbd>');
+            
+            // Horizontal rules (various styles)
+            html = html.replace(/^(\*{3,}|_{3,}|-{3,})$/gm, '<hr style="border: none; border-top: 1px solid #3e3e42; margin: 24px 0;">');
+            
+            // Line breaks (two spaces + newline)
+            html = html.replace(/  \n/g, '<br>');
+            
+            // Escape characters
+            html = html.replace(/\\([\\*_{}[\]()#+\-.!])/g, '$1');
+            
+            // Paragraphs (handle double newlines)
+            html = html.replace(/\n\s*\n/g, '</p><p style="margin: 12px 0; line-height: 1.6;">');
+            
+            // Wrap content in paragraphs if not already wrapped
+            if (html && !html.match(/^<[h1-6ul]/)) {
+                html = '<p style="margin: 12px 0; line-height: 1.6;">' + html + '</p>';
+            }
+            
+            // Clean up empty paragraphs and fix nested tags
+            html = html.replace(/<p[^>]*><\/p>/g, '');
+            html = html.replace(/<p[^>]*>(<h[1-6][^>]*>)/g, '$1');
+            html = html.replace(/(<\/h[1-6]>)<\/p>/g, '$1');
+            html = html.replace(/<p[^>]*>(<[uo]l[^>]*>)/g, '$1');
+            html = html.replace(/(<\/[uo]l>)<\/p>/g, '$1');
+            html = html.replace(/<p[^>]*>(<pre[^>]*>)/g, '$1');
+            html = html.replace(/(<\/pre>)<\/p>/g, '$1');
+            html = html.replace(/<p[^>]*>(<blockquote[^>]*>)/g, '$1');
+            html = html.replace(/(<\/blockquote>)<\/p>/g, '$1');
+            html = html.replace(/<p[^>]*>(<hr[^>]*>)/g, '$1');
+            html = html.replace(/(<hr[^>]*>)<\/p>/g, '$1');
+            html = html.replace(/<p[^>]*>(<table[^>]*>)/g, '$1');
+            html = html.replace(/(<\/table>)<\/p>/g, '$1');
+            
+            // Clean up consecutive lists and blockquotes
+            html = html.replace(/<\/ul>\s*<ul[^>]*>/g, '');
+            html = html.replace(/<\/ol>\s*<ol[^>]*>/g, '');
+            html = html.replace(/<\/blockquote>\s*<blockquote[^>]*>/g, '<br>');
+            
+            return html;
+        }
+        
+        // Global variables for mode state
+        let isWysiwygMode = false;
+        
+        // Toggle between Markdown and WYSIWYG modes
+        function toggleMode() {
+            const markdownEditor = document.getElementById('markdown-editor');
+            const wysiwygEditor = document.getElementById('wysiwyg-editor');
+            const toggleBtn = document.getElementById('mode-toggle');
+            
+            isWysiwygMode = !isWysiwygMode;
+            
+            if (isWysiwygMode) {
+                // Switch to WYSIWYG mode
+                markdownEditor.style.display = 'none';
+                wysiwygEditor.style.display = 'block';
+                toggleBtn.textContent = 'Markdown';
+                toggleBtn.style.background = '#e07b39';
+                
+                // Convert markdown to HTML for WYSIWYG
+                const markdownText = markdownEditor.value;
+                const html = simpleMarkdownToHtml(markdownText);
+                wysiwygEditor.innerHTML = html || '<p>Start typing here...</p>';
+            } else {
+                // Switch to Markdown mode
+                wysiwygEditor.style.display = 'none';
+                markdownEditor.style.display = 'block';
+                toggleBtn.textContent = 'WYSIWYG';
+                toggleBtn.style.background = '#0e639c';
+                
+                // Convert HTML back to markdown
+                const html = wysiwygEditor.innerHTML;
+                const markdown = htmlToMarkdown(html);
+                markdownEditor.value = markdown;
+            }
+            
+            updatePreviewContent();
+        }
+        
+        // Comprehensive HTML to Markdown converter
+        function htmlToMarkdown(html) {
+            let markdown = html;
+            
+            // Tables
+            markdown = markdown.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, function(match, tableContent) {
+                let result = '\n';
+                const rows = tableContent.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || [];
+                
+                rows.forEach((row, index) => {
+                    const cells = row.match(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi) || [];
+                    const cellTexts = cells.map(cell => cell.replace(/<[^>]*>/g, '').trim());
+                    result += '| ' + cellTexts.join(' | ') + ' |\n';
+                    
+                    if (index === 0) {
+                        // Add separator after header
+                        result += '|' + cellTexts.map(() => '----------').join('|') + '|\n';
+                    }
+                });
+                
+                return result + '\n';
+            });
+            
+            // Headers (all levels)
+            markdown = markdown.replace(/<h6[^>]*>(.*?)<\/h6>/gi, '###### $1\n\n');
+            markdown = markdown.replace(/<h5[^>]*>(.*?)<\/h5>/gi, '##### $1\n\n');
+            markdown = markdown.replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n\n');
+            markdown = markdown.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
+            markdown = markdown.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
+            markdown = markdown.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
+            
+            // Code blocks (before inline code)
+            markdown = markdown.replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, '```\n$1\n```\n\n');
+            
+            // Inline code
+            markdown = markdown.replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`');
+            
+            // Bold and Italic combinations
+            markdown = markdown.replace(/<strong[^>]*><em[^>]*>(.*?)<\/em><\/strong>/gi, '***$1***');
+            markdown = markdown.replace(/<em[^>]*><strong[^>]*>(.*?)<\/strong><\/em>/gi, '***$1***');
+            markdown = markdown.replace(/<strong[^>]*><u[^>]*>(.*?)<\/u><\/strong>/gi, '**<u>$1</u>**');
+            markdown = markdown.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
+            markdown = markdown.replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**');
+            markdown = markdown.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
+            markdown = markdown.replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*');
+            
+            // Strikethrough and underline
+            markdown = markdown.replace(/<del[^>]*>(.*?)<\/del>/gi, '~~$1~~');
+            markdown = markdown.replace(/<s[^>]*>(.*?)<\/s>/gi, '~~$1~~');
+            markdown = markdown.replace(/<strike[^>]*>(.*?)<\/strike>/gi, '~~$1~~');
+            markdown = markdown.replace(/<u[^>]*>(.*?)<\/u>/gi, '<u>$1</u>');
+            
+            // Superscript and subscript
+            markdown = markdown.replace(/<sup[^>]*>(.*?)<\/sup>/gi, '^$1^');
+            markdown = markdown.replace(/<sub[^>]*>(.*?)<\/sub>/gi, '~$1~');
+            
+            // Highlight
+            markdown = markdown.replace(/<mark[^>]*>(.*?)<\/mark>/gi, '==$1==');
+            
+            // Definition lists
+            markdown = markdown.replace(/<dl[^>]*>([\s\S]*?)<\/dl>/gi, function(match, content) {
+                const terms = content.match(/<dt[^>]*>(.*?)<\/dt>/gi) || [];
+                const definitions = content.match(/<dd[^>]*>(.*?)<\/dd>/gi) || [];
+                let result = '';
+                
+                for (let i = 0; i < Math.min(terms.length, definitions.length); i++) {
+                    const term = terms[i].replace(/<[^>]*>/g, '').trim();
+                    const def = definitions[i].replace(/<[^>]*>/g, '').trim();
+                    result += `${term}\n: ${def}\n\n`;
+                }
+                
+                return result;
+            });
+            
+            // Keyboard keys
+            markdown = markdown.replace(/<kbd[^>]*>(.*?)<\/kbd>/gi, '<kbd>$1</kbd>');
+            
+            // Footnotes
+            markdown = markdown.replace(/<sup[^>]*><a[^>]*href="#fn-([^"]*)"[^>]*>.*?<\/a><\/sup>/gi, '[^$1]');
+            
+            // Images
+            markdown = markdown.replace(/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>/gi, '![$2]($1)');
+            markdown = markdown.replace(/<img[^>]*alt="([^"]*)"[^>]*src="([^"]*)"[^>]*>/gi, '![$1]($2)');
+            markdown = markdown.replace(/<img[^>]*src="([^"]*)"[^>]*>/gi, '![]($1)');
+            
+            // Links
+            markdown = markdown.replace(/<a[^>]*href="([^"]*)"[^>]*title="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$3]($1 "$2")');
+            markdown = markdown.replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
+            
+            // Task lists (checkboxes)
+            markdown = markdown.replace(/<li[^>]*><input[^>]*type="checkbox"[^>]*checked[^>]*>[^<]*([^<]*)<\/li>/gi, '- [x] $1');
+            markdown = markdown.replace(/<li[^>]*><input[^>]*type="checkbox"[^>]*>[^<]*([^<]*)<\/li>/gi, '- [ ] $1');
+            
+            // Lists - Ordered
+            markdown = markdown.replace(/<ol[^>]*>([\s\S]*?)<\/ol>/gi, function(match, content) {
+                const items = content.match(/<li[^>]*>(.*?)<\/li>/gi) || [];
+                return items.map((item, index) => {
+                    const text = item.replace(/<[^>]*>/g, '').trim();
+                    return `${index + 1}. ${text}`;
+                }).join('\n') + '\n\n';
+            });
+            
+            // Lists - Unordered
+            markdown = markdown.replace(/<ul[^>]*>([\s\S]*?)<\/ul>/gi, function(match, content) {
+                const items = content.match(/<li[^>]*>(.*?)<\/li>/gi) || [];
+                return items.map(item => {
+                    const text = item.replace(/<[^>]*>/g, '').trim();
+                    return `- ${text}`;
+                }).join('\n') + '\n\n';
+            });
+            
+            // Blockquotes (handle nested)
+            markdown = markdown.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, function(match, content) {
+                const lines = content.replace(/<[^>]*>/g, '').trim().split('\n');
+                return lines.map(line => `> ${line.trim()}`).join('\n') + '\n\n';
+            });
+            
+            // Horizontal rules
+            markdown = markdown.replace(/<hr[^>]*>/gi, '\n---\n\n');
+            
+            // Line breaks
+            markdown = markdown.replace(/<br\s*\/?>/gi, '  \n');
+            
+            // Paragraphs
+            markdown = markdown.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '$1\n\n');
+            
+            // Division/sections
+            markdown = markdown.replace(/<div[^>]*>([\s\S]*?)<\/div>/gi, '$1\n');
+            
+            // Clean up remaining HTML tags
+            markdown = markdown.replace(/<[^>]*>/g, '');
+            
+            // Clean up whitespace
+            markdown = markdown.replace(/\n{3,}/g, '\n\n'); // Limit consecutive newlines
+            markdown = markdown.replace(/^\s+|\s+$/g, ''); // Trim start/end whitespace
+            markdown = markdown.replace(/[ \t]+$/gm, ''); // Remove trailing spaces on lines
+            
+            // Unescape HTML entities
+            markdown = markdown.replace(/&amp;/g, '&');
+            markdown = markdown.replace(/&lt;/g, '<');
+            markdown = markdown.replace(/&gt;/g, '>');
+            markdown = markdown.replace(/&quot;/g, '"');
+            markdown = markdown.replace(/&#39;/g, "'");
+            
+            return markdown.trim();
+        }
+        
+        // Sync WYSIWYG content to Markdown
+        function syncWysiwygToMarkdown() {
+            if (isWysiwygMode) {
+                updatePreviewContent();
+            }
+        }
+        
+        // Update preview content
+        function updatePreviewContent() {
+            const markdownEditor = document.getElementById('markdown-editor');
+            const wysiwygEditor = document.getElementById('wysiwyg-editor');
+            const previewContent = document.getElementById('preview-content');
+            
+            if (!previewContent) return;
+            
+            let html = '';
+            
+            if (isWysiwygMode && wysiwygEditor) {
+                // In WYSIWYG mode, use the WYSIWYG content directly
+                html = wysiwygEditor.innerHTML;
+            } else if (!isWysiwygMode && markdownEditor) {
+                // In Markdown mode, convert markdown to HTML
+                html = simpleMarkdownToHtml(markdownEditor.value);
+            }
+            
+            previewContent.innerHTML = html || '<h3>📝 Markdown Preview</h3><p>Start typing to see preview...</p>';
+        }
+        
+        // Comprehensive format text function
+        function formatText(command, value = null) {
+            if (isWysiwygMode) {
+                const wysiwygEditor = document.getElementById('wysiwyg-editor');
+                wysiwygEditor.focus();
+                
+                switch(command) {
+                    case 'bold':
+                        document.execCommand('bold', false, null);
+                        break;
+                    case 'italic':
+                        document.execCommand('italic', false, null);
+                        break;
+                    case 'strikethrough':
+                        document.execCommand('strikeThrough', false, null);
+                        break;
+                    case 'underline':
+                        document.execCommand('underline', false, null);
+                        break;
+                    case 'heading':
+                        if (value) {
+                            document.execCommand('formatBlock', false, `h${value}`);
+                        }
+                        break;
+                    case 'code':
+                        insertWysiwygElement('code', 'background: #2d2d30; padding: 2px 6px; border-radius: 3px; color: #ce9178; font-family: monospace;');
+                        break;
+                    case 'codeblock':
+                        insertWysiwygElement('pre', 'background: #2d2d30; padding: 16px; border-radius: 6px; overflow-x: auto; color: #ce9178; font-family: monospace;');
+                        break;
+                    case 'bulletlist':
+                        document.execCommand('insertUnorderedList', false, null);
+                        break;
+                    case 'numberlist':
+                        document.execCommand('insertOrderedList', false, null);
+                        break;
+                    case 'checklist':
+                        insertChecklistItem();
+                        break;
+                    case 'link':
+                        const url = prompt('Enter URL:');
+                        if (url) {
+                            document.execCommand('createLink', false, url);
+                        }
+                        break;
+                    case 'image':
+                        const imgUrl = prompt('Enter image URL:');
+                        const altText = prompt('Enter alt text (optional):') || 'image';
+                        if (imgUrl) {
+                            document.execCommand('insertHTML', false, `<img src="${imgUrl}" alt="${altText}" style="max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0;">`);
+                        }
+                        break;
+                    case 'quote':
+                        document.execCommand('formatBlock', false, 'blockquote');
+                        break;
+                    case 'table':
+                        insertTable();
+                        break;
+                    case 'hr':
+                        document.execCommand('insertHTML', false, '<hr style="border: none; border-top: 1px solid #3e3e42; margin: 24px 0;">');
+                        break;
+                    case 'highlight':
+                        insertWysiwygElement('mark', 'background: #ffeb3b; color: #000; padding: 1px 2px;');
+                        break;
+                    case 'superscript':
+                        document.execCommand('superscript', false, null);
+                        break;
+                    case 'subscript':
+                        document.execCommand('subscript', false, null);
+                        break;
+                    case 'footnote':
+                        const footnoteNum = prompt('Enter footnote number:') || '1';
+                        document.execCommand('insertHTML', false, `<sup><a href="#fn-${footnoteNum}" style="color: #4fc1ff; text-decoration: none;">${footnoteNum}</a></sup>`);
+                        break;
+                    case 'keyboard':
+                        insertWysiwygElement('kbd', 'background: #2d2d30; border: 1px solid #555; border-radius: 3px; padding: 2px 6px; font-family: monospace; font-size: 0.9em;');
+                        break;
+                    case 'definition':
+                        const term = prompt('Enter term to define:') || 'Term';
+                        const definition = prompt('Enter definition:') || 'Definition';
+                        document.execCommand('insertHTML', false, `<dl><dt style="font-weight: bold; margin-bottom: 4px;">${term}</dt><dd style="margin-left: 20px; margin-bottom: 8px;">${definition}</dd></dl>`);
+                        break;
+                }
+            } else {
+                // In markdown mode, insert markdown syntax
+                const markdownEditor = document.getElementById('markdown-editor');
+                const start = markdownEditor.selectionStart;
+                const end = markdownEditor.selectionEnd;
+                const selectedText = markdownEditor.value.substring(start, end);
+                let replacement = selectedText;
+                let cursorOffset = 0;
+                
+                switch(command) {
+                    case 'bold':
+                        replacement = `**${selectedText || 'bold text'}**`;
+                        cursorOffset = selectedText ? 0 : -2;
+                        break;
+                    case 'italic':
+                        replacement = `*${selectedText || 'italic text'}*`;
+                        cursorOffset = selectedText ? 0 : -1;
+                        break;
+                    case 'strikethrough':
+                        replacement = `~~${selectedText || 'strikethrough'}~~`;
+                        cursorOffset = selectedText ? 0 : -2;
+                        break;
+                    case 'underline':
+                        replacement = `<u>${selectedText || 'underline'}</u>`;
+                        cursorOffset = selectedText ? 0 : -4;
+                        break;
+                    case 'heading':
+                        if (value) {
+                            const hashes = '#'.repeat(parseInt(value));
+                            replacement = `${hashes} ${selectedText || 'Heading'}`;
+                        }
+                        break;
+                    case 'code':
+                        replacement = `\`${selectedText || 'code'}\``;
+                        cursorOffset = selectedText ? 0 : -1;
+                        break;
+                    case 'codeblock':
+                        replacement = `\`\`\`\n${selectedText || 'code'}\n\`\`\``;
+                        cursorOffset = selectedText ? 0 : -4;
+                        break;
+                    case 'bulletlist':
+                        const bulletLines = selectedText ? selectedText.split('\n').map(line => `- ${line}`).join('\n') : '- List item';
+                        replacement = bulletLines;
+                        break;
+                    case 'numberlist':
+                        const numberedLines = selectedText ? selectedText.split('\n').map((line, i) => `${i+1}. ${line}`).join('\n') : '1. List item';
+                        replacement = numberedLines;
+                        break;
+                    case 'checklist':
+                        const checkLines = selectedText ? selectedText.split('\n').map(line => `- [ ] ${line}`).join('\n') : '- [ ] Task item';
+                        replacement = checkLines;
+                        break;
+                    case 'link':
+                        const linkUrl = prompt('Enter URL:');
+                        if (linkUrl) {
+                            replacement = `[${selectedText || 'link text'}](${linkUrl})`;
+                            cursorOffset = selectedText ? 0 : -1 - linkUrl.length;
+                        }
+                        break;
+                    case 'image':
+                        const imageUrl = prompt('Enter image URL:');
+                        const imageAlt = prompt('Enter alt text (optional):') || 'image';
+                        if (imageUrl) {
+                            replacement = `![${imageAlt}](${imageUrl})`;
+                        }
+                        break;
+                    case 'quote':
+                        const quoteLines = selectedText ? selectedText.split('\n').map(line => `> ${line}`).join('\n') : '> Quote';
+                        replacement = quoteLines;
+                        break;
+                    case 'table':
+                        replacement = `| Header 1 | Header 2 | Header 3 |\n|----------|----------|----------|\n| Cell 1   | Cell 2   | Cell 3   |\n| Cell 4   | Cell 5   | Cell 6   |`;
+                        break;
+                    case 'hr':
+                        replacement = '---';
+                        break;
+                    case 'highlight':
+                        replacement = `==${selectedText || 'highlighted text'}==`;
+                        cursorOffset = selectedText ? 0 : -2;
+                        break;
+                    case 'superscript':
+                        replacement = `^${selectedText || 'superscript'}^`;
+                        cursorOffset = selectedText ? 0 : -1;
+                        break;
+                    case 'subscript':
+                        replacement = `~${selectedText || 'subscript'}~`;
+                        cursorOffset = selectedText ? 0 : -1;
+                        break;
+                    case 'footnote':
+                        const footnoteNumber = prompt('Enter footnote number:') || '1';
+                        replacement = `[^${footnoteNumber}]`;
+                        break;
+                    case 'keyboard':
+                        replacement = `<kbd>${selectedText || 'Key'}</kbd>`;
+                        cursorOffset = selectedText ? 0 : -6;
+                        break;
+                    case 'definition':
+                        const defTerm = prompt('Enter term to define:') || 'Term';
+                        const defDefinition = prompt('Enter definition:') || 'Definition';
+                        replacement = `${defTerm}\n: ${defDefinition}`;
+                        break;
+                }
+                
+                if (replacement !== selectedText) {
+                    markdownEditor.value = markdownEditor.value.substring(0, start) + replacement + markdownEditor.value.substring(end);
+                    markdownEditor.focus();
+                    const newPosition = start + replacement.length + cursorOffset;
+                    markdownEditor.setSelectionRange(newPosition, newPosition);
+                }
+            }
+            
+            updatePreviewContent();
+        }
+        
+        // Helper function to insert WYSIWYG elements
+        function insertWysiwygElement(tagName, styles) {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                const element = document.createElement(tagName);
+                element.style.cssText = styles;
+                
+                if (range.collapsed) {
+                    element.textContent = tagName === 'pre' ? 'code block' : 'text';
+                } else {
+                    try {
+                        range.surroundContents(element);
+                    } catch (e) {
+                        element.appendChild(range.extractContents());
+                        range.insertNode(element);
+                    }
+                }
+                
+                // Position cursor after the inserted element
+                const newRange = document.createRange();
+                newRange.setStartAfter(element);
+                newRange.setEndAfter(element);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+            }
+        }
+        
+        // Helper function to insert checklist items
+        function insertChecklistItem() {
+            document.execCommand('insertHTML', false, '<li style="list-style: none; margin: 4px 0;"><input type="checkbox" disabled style="margin-right: 8px;"> Task item</li>');
+        }
+        
+        // Helper function to insert tables
+        function insertTable() {
+            const rows = prompt('Number of rows:') || '3';
+            const cols = prompt('Number of columns:') || '3';
+            
+            let tableHtml = '<table style="border-collapse: collapse; width: 100%; margin: 16px 0;"><thead><tr>';
+            
+            // Header row
+            for (let c = 1; c <= parseInt(cols); c++) {
+                tableHtml += `<th style="border: 1px solid #3e3e42; padding: 8px 12px; background: #2d2d30;">Header ${c}</th>`;
+            }
+            tableHtml += '</tr></thead><tbody>';
+            
+            // Body rows
+            for (let r = 1; r <= parseInt(rows); r++) {
+                tableHtml += '<tr>';
+                for (let c = 1; c <= parseInt(cols); c++) {
+                    tableHtml += `<td style="border: 1px solid #3e3e42; padding: 8px 12px;">Cell ${r},${c}</td>`;
+                }
+                tableHtml += '</tr>';
+            }
+            
+            tableHtml += '</tbody></table>';
+            document.execCommand('insertHTML', false, tableHtml);
+        }
+        
+        // Add drag and drop support for images and files
+        function addDragDropSupport() {
+            const markdownEditor = document.getElementById('markdown-editor');
+            const wysiwygEditor = document.getElementById('wysiwyg-editor');
+            const container = document.getElementById('monaco-editor');
+            
+            function handleDragOver(e) {
+                e.preventDefault();
+                container.classList.add('drag-over');
+            }
+            
+            function handleDragLeave(e) {
+                e.preventDefault();
+                container.classList.remove('drag-over');
+            }
+            
+            function handleDrop(e) {
+                e.preventDefault();
+                container.classList.remove('drag-over');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    for (let file of files) {
+                        if (file.type.startsWith('image/')) {
+                            // Handle image files
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                const dataUrl = e.target.result;
+                                const altText = file.name.replace(/\.[^/.]+$/, "");
+                                
+                                if (isWysiwygMode && wysiwygEditor) {
+                                    wysiwygEditor.focus();
+                                    document.execCommand('insertHTML', false, 
+                                        `<img src="${dataUrl}" alt="${altText}" style="max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0;">`
+                                    );
+                                } else if (markdownEditor) {
+                                    const pos = markdownEditor.selectionStart;
+                                    const before = markdownEditor.value.substring(0, pos);
+                                    const after = markdownEditor.value.substring(pos);
+                                    markdownEditor.value = before + `![${altText}](${dataUrl})` + after;
+                                    markdownEditor.focus();
+                                }
+                                updatePreviewContent();
+                            };
+                            reader.readAsDataURL(file);
+                        } else {
+                            // Handle other files as links
+                            const fileName = file.name;
+                            if (isWysiwygMode && wysiwygEditor) {
+                                wysiwygEditor.focus();
+                                document.execCommand('insertHTML', false, 
+                                    `<a href="#" style="color: #4fc1ff; text-decoration: underline;">${fileName}</a>`
+                                );
+                            } else if (markdownEditor) {
+                                const pos = markdownEditor.selectionStart;
+                                const before = markdownEditor.value.substring(0, pos);
+                                const after = markdownEditor.value.substring(pos);
+                                markdownEditor.value = before + `[${fileName}](#)` + after;
+                                markdownEditor.focus();
+                            }
+                            updatePreviewContent();
+                        }
+                    }
+                }
+            }
+            
+            // Add event listeners to both editors
+            [markdownEditor, wysiwygEditor, container].forEach(element => {
+                if (element) {
+                    element.addEventListener('dragover', handleDragOver);
+                    element.addEventListener('dragleave', handleDragLeave);
+                    element.addEventListener('drop', handleDrop);
+                }
+            });
+        }
+        
+        // Add keyboard shortcuts
+        function addKeyboardShortcuts() {
+            document.addEventListener('keydown', function(e) {
+                const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+                
+                // Prevent default browser shortcuts for our custom ones
+                if (isCtrlOrCmd && ['b', 'i', 'u', 'k', 'l', 'h', 'j', 'p'].includes(e.key.toLowerCase())) {
+                    e.preventDefault();
+                    
+                    switch(e.key.toLowerCase()) {
+                        case 'b':
+                            formatText('bold');
+                            break;
+                        case 'i':
+                            formatText('italic');
+                            break;
+                        case 'u':
+                            formatText('underline');
+                            break;
+                        case 'k':
+                            formatText('link');
+                            break;
+                        case 'l':
+                            formatText('bulletlist');
+                            break;
+                        case 'h':
+                            formatText('heading', '1');
+                            break;
+                        case 'j':
+                            formatText('code');
+                            break;
+                        case 'p':
+                            togglePreview();
+                            break;
+                    }
+                }
+                
+                // Additional shortcuts
+                if (isCtrlOrCmd && e.shiftKey) {
+                    switch(e.key.toLowerCase()) {
+                        case 'c':
+                            e.preventDefault();
+                            formatText('codeblock');
+                            break;
+                        case 't':
+                            e.preventDefault();
+                            formatText('table');
+                            break;
+                        case 'q':
+                            e.preventDefault();
+                            formatText('quote');
+                            break;
+                        case 'm':
+                            e.preventDefault();
+                            toggleMode();
+                            break;
+                        case 'k':
+                            e.preventDefault();
+                            formatText('checklist');
+                            break;
+                        case 'h':
+                            e.preventDefault();
+                            formatText('highlight');
+                            break;
+                    }
+                }
+            });
+        }
+        
+        // Show keyboard shortcuts help
+        function showShortcuts() {
+            const shortcutsHtml = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center;" onclick="this.remove()">
+                    <div style="background: #2d2d30; border: 1px solid #555; border-radius: 8px; padding: 24px; max-width: 600px; max-height: 80vh; overflow-y: auto; color: #cccccc;" onclick="event.stopPropagation()">
+                        <h2 style="color: #4fc1ff; margin-top: 0; text-align: center;">🚀 mdMagic Editor Shortcuts</h2>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div>
+                                <h3 style="color: #ffeb3b; margin-bottom: 8px;">Basic Formatting</h3>
+                                <div style="font-family: monospace; font-size: 12px;">
+                                    <div><kbd>Ctrl+B</kbd> Bold text</div>
+                                    <div><kbd>Ctrl+I</kbd> Italic text</div>
+                                    <div><kbd>Ctrl+U</kbd> Underline text</div>
+                                    <div><kbd>Ctrl+J</kbd> Inline code</div>
+                                    <div><kbd>Ctrl+K</kbd> Insert link</div>
+                                    <div><kbd>Ctrl+H</kbd> Header H1</div>
+                                </div>
+                                
+                                <h3 style="color: #ffeb3b; margin: 16px 0 8px;">Lists & Structure</h3>
+                                <div style="font-family: monospace; font-size: 12px;">
+                                    <div><kbd>Ctrl+L</kbd> Bullet list</div>
+                                    <div><kbd>Ctrl+Shift+C</kbd> Code block</div>
+                                    <div><kbd>Ctrl+Shift+T</kbd> Insert table</div>
+                                    <div><kbd>Ctrl+Shift+Q</kbd> Blockquote</div>
+                                    <div><kbd>Ctrl+Shift+K</kbd> Checklist</div>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 style="color: #ffeb3b; margin-bottom: 8px;">Advanced Features</h3>
+                                <div style="font-family: monospace; font-size: 12px;">
+                                    <div><kbd>Ctrl+Shift+H</kbd> Highlight text</div>
+                                    <div><kbd>Ctrl+P</kbd> Toggle preview</div>
+                                    <div><kbd>Ctrl+Shift+M</kbd> Toggle WYSIWYG</div>
+                                    <div>Drag & drop images/files</div>
+                                </div>
+                                
+                                <h3 style="color: #ffeb3b; margin: 16px 0 8px;">WYSIWYG Mode</h3>
+                                <div style="font-size: 12px;">
+                                    <div>• Visual editing with live preview</div>
+                                    <div>• All toolbar buttons work</div>
+                                    <div>• Real-time HTML conversion</div>
+                                    <div>• Bidirectional sync</div>
+                                </div>
+                                
+                                <h3 style="color: #ffeb3b; margin: 16px 0 8px;">Supported Syntax</h3>
+                                <div style="font-size: 12px;">
+                                    <div>✓ Headers (H1-H6)</div>
+                                    <div>✓ Tables, Lists, Checklists</div>
+                                    <div>✓ Code blocks & syntax highlighting</div>
+                                    <div>✓ Images, Links, Footnotes</div>
+                                    <div>✓ Highlight, Superscript, Subscript</div>
+                                    <div>✓ Definition lists, Keyboard keys</div>
+                                    <div>✓ Blockquotes, Horizontal rules</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align: center; margin-top: 16px;">
+                            <button onclick="this.parentElement.parentElement.remove()" style="padding: 8px 16px; background: #0e639c; color: white; border: none; border-radius: 4px; cursor: pointer;">Close (Click anywhere to close)</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', shortcutsHtml);
+        }
+        
+        // Toggle preview panel
+        function togglePreview() {
+            const container = document.getElementById('monaco-editor');
+            const previewPanel = document.getElementById('preview-panel');
+            
+            if (previewPanel.style.display === 'none' || previewPanel.style.width === '0%') {
+                // Show preview
+                container.style.width = '50%';
+                previewPanel.style.display = 'block';
+                previewPanel.style.width = '50%';
+                updatePreviewContent();
+            } else {
+                // Hide preview
+                container.style.width = '100%';
+                previewPanel.style.display = 'none';
+                previewPanel.style.width = '0%';
+            }
+        }
+        
+        // Add message handling for VS Code integration
+        window.addEventListener('message', function(event) {
+            const message = event.data;
+            console.log('=== FALLBACK: Received VS Code message ===', message);
+            
+            switch(message.type) {
+                case 'setContent':
+                    console.log('=== FALLBACK: Setting content ===', message.payload?.content?.length || 0, 'characters');
+                    const markdownEditor = document.getElementById('markdown-editor');
+                    const wysiwygEditor = document.getElementById('wysiwyg-editor');
+                    
+                    if (markdownEditor && markdownEditor.style.display !== 'none') {
+                        markdownEditor.value = message.payload.content || '';
+                        console.log('=== FALLBACK: Content set to markdown editor ===');
+                        updatePreviewContent();
+                    }
+                    if (wysiwygEditor && wysiwygEditor.style.display !== 'none') {
+                        const html = simpleMarkdownToHtml(message.payload.content || '');
+                        wysiwygEditor.innerHTML = html || '<p>Start typing...</p>';
+                        console.log('=== FALLBACK: Content set to WYSIWYG editor ===');
+                        updatePreviewContent();
+                    }
+                    break;
+                    
+                case 'webviewReady':
+                    // Extension is asking if we're ready
+                    break;
+                    
+                default:
+                    console.log('=== FALLBACK: Unhandled message type ===', message.type);
+            }
+        });
+
+        // Set fallback timer - reduced for faster testing
+        setTimeout(activateFallbackEditor, 1500);
+        
+        console.log('About to load monaco-loader.js');
+    </script>
+    <script src="scripts/monaco-loader.js" onerror="console.error('Failed to load monaco-loader.js'); activateFallbackEditor();"></script>
+    <script>
+        console.log('Monaco loader should be loaded, now loading editor.js');
+    </script>
+    <script src="scripts/editor.js" onerror="console.error('Failed to load editor.js'); activateFallbackEditor();"></script>
+    <script>
+        console.log('All scripts loaded, DOM should be initialized soon');
+        
+        // Cancel fallback if scripts loaded successfully
+        setTimeout(() => {
+            if (window.MdMagicEditor || window.MonacoEditorLoader) {
+                console.log('Scripts loaded successfully, canceling fallback');
+            }
+        }, 1000);
+    </script>
 </body>
 </html>

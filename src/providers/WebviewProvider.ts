@@ -127,6 +127,39 @@ export class WebviewProvider implements Component {
   }
 
   /**
+   * Update all webviews for a specific document when file changes
+   */
+  public updateWebviewsForDocument(documentUri: vscode.Uri, content: string): void {
+    const documentId = this.generateDocumentId(documentUri);
+    
+    // Find all webviews for this document
+    const webviewsForDocument = Array.from(this.panels.values()).filter(
+      panel => panel.documentId === documentId
+    );
+
+    console.log(`[WebviewProvider] Updating ${webviewsForDocument.length} webviews for document ${documentUri.fsPath}`);
+
+    // Update each webview
+    for (const panelInfo of webviewsForDocument) {
+      // Update state
+      panelInfo.state.content = content;
+      panelInfo.state.isDirty = false; // Fresh from file
+      panelInfo.state.lastModified = new Date();
+
+      // Send content to webview
+      panelInfo.panel.webview.postMessage({
+        type: MessageType.SET_CONTENT,
+        payload: { 
+          content,
+          fromFile: true // Indicate this is from file, not user edit
+        },
+      });
+
+      console.log(`[WebviewProvider] Updated webview ${panelInfo.id} with fresh content from file`);
+    }
+  }
+
+  /**
    * Handle messages from webviews
    */
   public handleWebviewMessage(message: WebviewMessage, panelId: string): void {
@@ -233,15 +266,30 @@ export class WebviewProvider implements Component {
     const panelId = this.generatePanelId();
     const documentId = this.generateDocumentId(documentUri);
 
-    // Ensure document is opened in DocumentManager for file watching
+    // Ensure document is opened in DocumentManager for file watching and get current content
     try {
       const documentManager = this.extensionController?.getComponent('document-manager');
       if (documentManager) {
-        await documentManager.openDocument(documentUri);
+        const document = await documentManager.openDocument(documentUri);
         console.log(`[WebviewProvider] Opened document in DocumentManager: ${documentUri.fsPath}`);
+        
+        // Use current document content if available (this ensures we get the latest file content)
+        if (document && document.content) {
+          content = document.content;
+          console.log(`[WebviewProvider] Using current document content (${content.length} chars)`);
+        }
       }
     } catch (error) {
       console.warn(`[WebviewProvider] Failed to open document in DocumentManager: ${error}`);
+      
+      // Fallback: read file directly if DocumentManager fails
+      try {
+        const fileContent = await vscode.workspace.fs.readFile(documentUri);
+        content = fileContent.toString();
+        console.log(`[WebviewProvider] Fallback: read file directly (${content.length} chars)`);
+      } catch (fileError) {
+        console.warn(`[WebviewProvider] Failed to read file directly: ${fileError}`);
+      }
     }
 
     // Create panel info
@@ -257,6 +305,7 @@ export class WebviewProvider implements Component {
         content,
         isDirty: false,
         lastModified: new Date(),
+        documentUri: documentUri.toString(), // Store URI for syncing
       },
       isActive: panel.active,
       isVisible: panel.visible,
@@ -474,22 +523,94 @@ export class WebviewProvider implements Component {
    */
   private handleContentChanged(message: WebviewMessage, panelId: string): void {
     const panelInfo = this.panels.get(panelId);
-    if (panelInfo) {
-      panelInfo.state.content = message.payload.content;
-      panelInfo.state.isDirty = message.payload.isDirty || true;
-      panelInfo.state.lastModified = new Date();
+    if (!panelInfo) {
+      return;
+    }
+
+    // Update panel state
+    panelInfo.state.content = message.payload.content;
+    panelInfo.state.isDirty = message.payload.isDirty !== false; // Default to true if not specified
+    panelInfo.state.lastModified = new Date();
+
+    // Sync changes back to DocumentManager
+    try {
+      const documentManager = this.extensionController?.getComponent('document-manager');
+      if (documentManager && panelInfo.state.documentUri) {
+        const documentUri = vscode.Uri.parse(panelInfo.state.documentUri);
+        const document = documentManager.getDocument(documentUri);
+        
+        if (document && document.content !== panelInfo.state.content) {
+          console.log(`[WebviewProvider] Syncing webview content changes to DocumentManager: ${documentUri.fsPath}`);
+          document.updateContent(panelInfo.state.content);
+          console.log(`[WebviewProvider] Document content updated in DocumentManager`);
+        }
+      }
+    } catch (error) {
+      console.warn(`[WebviewProvider] Failed to sync content to DocumentManager:`, error);
     }
   }
 
   /**
    * Handle save document message
    */
-  private handleSaveDocument(message: WebviewMessage, panelId: string): void {
+  private async handleSaveDocument(message: WebviewMessage, panelId: string): Promise<void> {
     const panelInfo = this.panels.get(panelId);
-    if (panelInfo) {
-      // TODO: Implement actual document saving
+    if (!panelInfo) {
+      console.warn(`[WebviewProvider] Panel ${panelId} not found for save`);
+      return;
+    }
+
+    try {
       console.log(`[WebviewProvider] Save request for document ${panelInfo.documentId}`);
+      
+      // Get document manager
+      const documentManager = this.extensionController?.getComponent('document-manager');
+      if (!documentManager) {
+        console.warn('[WebviewProvider] DocumentManager not available for save');
+        return;
+      }
+
+      // Get the URI from panel state
+      if (!panelInfo.state.documentUri) {
+        console.warn('[WebviewProvider] No document URI stored in panel state for save');
+        return;
+      }
+      
+      const documentUri = vscode.Uri.parse(panelInfo.state.documentUri);
+
+      // Get the document from document manager
+      const document = documentManager.getDocument(documentUri);
+      if (!document) {
+        console.warn(`[WebviewProvider] Document not found in DocumentManager: ${documentUri.fsPath}`);
+        return;
+      }
+
+      // Update document content from webview
+      document.updateContent(panelInfo.state.content);
+
+      // Save the document
+      await documentManager.saveDocument(documentUri);
+      
+      // Update panel state
       panelInfo.state.isDirty = false;
+      panelInfo.state.lastModified = new Date();
+
+      // Notify webview that save completed
+      panelInfo.panel.webview.postMessage({
+        type: MessageType.CONTENT_CHANGED,
+        payload: { 
+          content: panelInfo.state.content,
+          isDirty: false,
+          saved: true
+        },
+      });
+
+      console.log(`[WebviewProvider] Document saved successfully: ${documentUri.fsPath}`);
+    } catch (error) {
+      console.error(`[WebviewProvider] Failed to save document: ${error}`);
+      
+      // Show error to user
+      vscode.window.showErrorMessage(`Failed to save document: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

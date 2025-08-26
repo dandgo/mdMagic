@@ -589,6 +589,11 @@ class MarkdownViewer {
         case 'setContent':
           console.log('[MarkdownViewer] Setting content:', message.payload?.content?.substring(0, 100));
           this.renderContent(message.payload.content);
+          
+          // Show notification if content updated from file
+          if (message.payload.fromFile) {
+            this.showFileUpdateNotification();
+          }
           break;
 
         case 'updateConfig':
@@ -665,6 +670,45 @@ class MarkdownViewer {
     
     // Apply other configuration changes as needed
     console.log('[MarkdownViewer] Configuration updated:', config);
+  }
+
+  /**
+   * Show brief notification that file was updated from disk
+   */
+  showFileUpdateNotification() {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: var(--vscode-notifications-background, #007acc);
+      color: var(--vscode-notifications-foreground, white);
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 13px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out;
+    `;
+    notification.textContent = '📄 File updated from disk';
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+      notification.style.opacity = '1';
+    }, 10);
+    
+    // Animate out and remove
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 200);
+    }, 2000);
   }
 }
 

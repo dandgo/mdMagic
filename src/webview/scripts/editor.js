@@ -2,13 +2,23 @@
  * mdMagic Editor - Main editor implementation with WYSIWYG features
  */
 
+console.log('=== mdMagic Editor Script Loaded ===');
+console.log('Document ready state:', document.readyState);
+console.log('Available DOM elements:', {
+  toolbar: document.getElementById('toolbar'),
+  editorContainer: document.getElementById('editor-container'),
+  monacoEditor: document.getElementById('monaco-editor'),
+  status: document.getElementById('status')
+});
+
 class MdMagicEditor {
   constructor() {
+    console.log('MdMagicEditor: Constructor called');
     this.vscode = acquireVsCodeApi();
     this.monacoLoader = new MonacoEditorLoader();
     this.editor = null;
     this.isInitialized = false;
-    this.previewMode = 'side'; // 'side', 'off', 'full'
+    this.previewMode = 'off'; // 'side', 'off', 'full' - start with off, user can toggle
     this.autoSaveTimeout = null;
     this.autoSaveDelay = 1000; // 1 second
     this.isWysiwygMode = false;
@@ -21,7 +31,11 @@ class MdMagicEditor {
       scrollPosition: 0
     };
 
-    this.initializeEditor();
+    console.log('MdMagicEditor: Starting initialization');
+    this.initializeEditor().catch(error => {
+      console.error('MdMagicEditor: Failed to initialize:', error);
+      this.showError('Failed to initialize editor: ' + error.message);
+    });
   }
 
   /**
@@ -39,6 +53,12 @@ class MdMagicEditor {
       
       // Create editor instance
       const container = document.getElementById('monaco-editor');
+      console.log('MdMagicEditor: Container found:', container);
+      if (!container) {
+        throw new Error('Monaco editor container not found');
+      }
+      
+      console.log('MdMagicEditor: Creating Monaco editor...');
       this.editor = await this.monacoLoader.createEditor(container, {
         value: this.documentState.content,
         language: 'markdown',
@@ -54,8 +74,11 @@ class MdMagicEditor {
         tabSize: 2,
         insertSpaces: true
       });
+      
+      console.log('MdMagicEditor: Editor created successfully:', this.editor);
 
       // Set up event listeners
+      console.log('MdMagicEditor: Setting up event listeners...');
       this.setupEventListeners();
       
       // Set up keyboard shortcuts
@@ -83,7 +106,11 @@ class MdMagicEditor {
       this.isInitialized = true;
       console.log('mdMagic Editor initialized successfully');
       
+      // Log initial content
+      console.log('MdMagicEditor: Initial editor content:', this.editor ? this.editor.getValue() : 'No editor');
+      
       // Notify extension that webview is ready
+      console.log('MdMagicEditor: Sending webviewReady message');
       this.vscode.postMessage({
         type: 'webviewReady',
         payload: {}
@@ -91,7 +118,37 @@ class MdMagicEditor {
       
     } catch (error) {
       console.error('Failed to initialize editor:', error);
+      console.error('Error stack:', error.stack);
       this.showError('Failed to initialize editor: ' + error.message);
+      
+      // Try to at least show basic functionality
+      this.showBasicEditor();
+    }
+  }
+
+  /**
+   * Show basic editor if full initialization fails
+   */
+  showBasicEditor() {
+    console.log('MdMagicEditor: Showing basic editor fallback');
+    
+    try {
+      // Set up basic toolbar
+      const toolbar = document.getElementById('toolbar');
+      if (toolbar) {
+        toolbar.innerHTML = '<div style="color: #cccccc; padding: 8px;">mdMagic Editor - Basic Mode</div>';
+      }
+      
+      // Set up basic editor
+      const container = document.getElementById('monaco-editor');
+      if (container) {
+        container.innerHTML = '<textarea style="width: 100%; height: 100%; background: #1e1e1e; color: #cccccc; border: none; padding: 10px; font-family: monospace;" placeholder="Start typing your markdown here..."></textarea>';
+      }
+      
+      // Update status
+      this.updateStatus('Basic Editor', 'Fallback Mode');
+    } catch (error) {
+      console.error('Even basic editor failed:', error);
     }
   }
 
@@ -99,8 +156,22 @@ class MdMagicEditor {
    * Set up DOM elements
    */
   setupDOMElements() {
+    console.log('MdMagicEditor: Setting up DOM elements');
+    
     // Create the enhanced toolbar
     const toolbar = document.getElementById('toolbar');
+    console.log('MdMagicEditor: Toolbar element found:', toolbar);
+    
+    if (!toolbar) {
+      console.error('MdMagicEditor: Toolbar element not found');
+      return;
+    }
+    
+    console.log('MdMagicEditor: Creating toolbar HTML...');
+    
+    // Clear any existing content
+    toolbar.innerHTML = '';
+    
     toolbar.innerHTML = `
       <!-- Format Group -->
       <div class="toolbar-group" role="group" aria-label="Text Formatting">
@@ -187,20 +258,43 @@ class MdMagicEditor {
         </button>
       </div>
     `;
+    
+    console.log('MdMagicEditor: Toolbar HTML created');
 
     // Create preview panel
     const editorContainer = document.getElementById('editor-container');
+    console.log('MdMagicEditor: Editor container found:', editorContainer);
+    
+    if (!editorContainer) {
+      console.error('MdMagicEditor: Editor container not found');
+      return;
+    }
+    
     const previewPanel = document.createElement('div');
     previewPanel.id = 'preview-panel';
-    previewPanel.innerHTML = '<div id="preview-content"></div>';
+    previewPanel.innerHTML = '<div id="preview-content"><h3>📝 Markdown Preview</h3><p>Start typing to see your markdown rendered here...</p></div>';
     editorContainer.appendChild(previewPanel);
+    
+    // Add some debugging styles to make it visible during development
+    previewPanel.style.border = '2px solid #007acc';
+    previewPanel.style.backgroundColor = 'var(--vscode-editor-background)';
+    
+    console.log('MdMagicEditor: Preview panel created and added');
   }
 
   /**
    * Set up event listeners
    */
   setupEventListeners() {
+    console.log('MdMagicEditor: setupEventListeners called, editor:', this.editor);
+    
+    if (!this.editor) {
+      console.error('MdMagicEditor: Editor is null in setupEventListeners');
+      return;
+    }
+    
     // Monaco editor events
+    console.log('MdMagicEditor: Setting up onDidChangeModelContent...');
     this.editor.onDidChangeModelContent(() => {
       this.documentState.content = this.editor.getValue();
       this.documentState.isDirty = true;
@@ -230,9 +324,16 @@ class MdMagicEditor {
     });
 
     // Toolbar events (delegated)
-    document.getElementById('toolbar').addEventListener('click', (e) => {
+    const toolbar = document.getElementById('toolbar');
+    console.log('MdMagicEditor: Setting up toolbar event delegation on:', toolbar);
+    
+    toolbar.addEventListener('click', (e) => {
+      console.log('MdMagicEditor: Toolbar click event:', e.target);
       const button = e.target.closest('button');
+      console.log('MdMagicEditor: Button found:', button, 'Command:', button?.dataset.command);
+      
       if (button && button.dataset.command) {
+        console.log('MdMagicEditor: Executing command:', button.dataset.command);
         this.executeCommand(button.dataset.command);
       }
     });
@@ -560,7 +661,11 @@ class MdMagicEditor {
    * Execute editor commands
    */
   executeCommand(command) {
+    console.log('MdMagicEditor: executeCommand called with:', command);
+    console.log('MdMagicEditor: isInitialized:', this.isInitialized, 'editor:', this.editor);
+    
     if (!this.isInitialized) {
+      console.log('MdMagicEditor: Editor not initialized, ignoring command');
       return;
     }
 
@@ -1068,15 +1173,25 @@ class MdMagicEditor {
    * Toggle preview panel
    */
   togglePreview() {
+    console.log('MdMagicEditor: togglePreview called, current mode:', this.previewMode);
+    
     const previewPanel = document.getElementById('preview-panel');
     const editorContainer = document.getElementById('editor-container');
     const monacoContainer = document.getElementById('monaco-editor');
     
+    console.log('MdMagicEditor: Preview elements found:');
+    console.log('  - previewPanel:', previewPanel);
+    console.log('  - editorContainer:', editorContainer);
+    console.log('  - monacoContainer:', monacoContainer);
+    
     if (this.previewMode === 'off') {
       // Show side preview
       this.previewMode = 'side';
+      console.log('MdMagicEditor: Adding visible class to preview panel');
       previewPanel.classList.add('visible');
       monacoContainer.style.width = '50%';
+      console.log('MdMagicEditor: Preview panel classes:', previewPanel.classList.toString());
+      console.log('MdMagicEditor: Monaco container width set to 50%');
     } else if (this.previewMode === 'side') {
       // Show full preview
       this.previewMode = 'full';
@@ -1102,11 +1217,17 @@ class MdMagicEditor {
    * Toggle WYSIWYG mode
    */
   toggleWysiwyg() {
+    console.log('MdMagicEditor: toggleWysiwyg called, current mode:', this.isWysiwygMode);
     this.isWysiwygMode = !this.isWysiwygMode;
+    console.log('MdMagicEditor: WYSIWYG mode is now:', this.isWysiwygMode);
     
     // Update button state
     const btn = document.getElementById('btn-wysiwyg');
-    btn.classList.toggle('active', this.isWysiwygMode);
+    console.log('MdMagicEditor: WYSIWYG button found:', btn);
+    if (btn) {
+      btn.classList.toggle('active', this.isWysiwygMode);
+      console.log('MdMagicEditor: Button classes after toggle:', btn.classList.toString());
+    }
     
     if (this.isWysiwygMode) {
       // Enable enhanced WYSIWYG mode
@@ -1252,17 +1373,24 @@ class MdMagicEditor {
    * Update preview content
    */
   updatePreview() {
+    console.log('MdMagicEditor: updatePreview called, previewMode:', this.previewMode);
+    
     if (this.previewMode === 'off') {
+      console.log('MdMagicEditor: Preview mode is off, skipping update');
       return;
     }
     
     const content = this.editor.getValue();
     const previewContent = document.getElementById('preview-content');
+    console.log('MdMagicEditor: Updating preview with content length:', content?.length || 0);
+    console.log('MdMagicEditor: Preview content element:', previewContent);
     
     try {
       // Simple markdown-to-HTML conversion
       const html = this.markdownToHtml(content);
+      console.log('MdMagicEditor: Generated HTML length:', html.length);
       previewContent.innerHTML = html;
+      console.log('MdMagicEditor: Preview content updated successfully');
     } catch (error) {
       console.error('Preview update error:', error);
       previewContent.innerHTML = '<p style="color: var(--vscode-errorForeground);">Preview Error: ' + error.message + '</p>';
@@ -1273,50 +1401,72 @@ class MdMagicEditor {
    * Simple markdown to HTML converter
    */
   markdownToHtml(markdown) {
+    if (!markdown) return '';
+    
     let html = markdown;
     
+    // Code blocks (must be before inline code)
+    html = html.replace(/```(\w+)?\n?([\s\S]*?)```/g, '<pre><code class="language-$1" style="background: #2d2d30; color: #ce9178;">$2</code></pre>');
+    
     // Headers
-    html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-    html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+    html = html.replace(/^#### (.*$)/gim, '<h4 style="color: #4fc1ff; margin: 24px 0 12px 0;">$1</h4>');
+    html = html.replace(/^### (.*$)/gim, '<h3 style="color: #4fc1ff; margin: 24px 0 12px 0;">$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h2 style="color: #4fc1ff; margin: 24px 0 12px 0; font-size: 1.5em;">$1</h2>');
+    html = html.replace(/^# (.*$)/gim, '<h1 style="color: #4fc1ff; margin: 24px 0 12px 0; font-size: 2em; border-bottom: 1px solid #3e3e42; padding-bottom: 8px;">$1</h1>');
     
-    // Bold
+    // Bold and Italic (order matters)
+    html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
     html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    
-    // Italic
     html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
     
     // Strikethrough
     html = html.replace(/~~(.*?)~~/g, '<del>$1</del>');
     
-    // Code blocks
-    html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-    
     // Inline code
-    html = html.replace(/`(.*?)`/g, '<code>$1</code>');
+    html = html.replace(/`([^`]+)`/g, '<code style="background: #2d2d30; padding: 2px 6px; border-radius: 3px; color: #ce9178; font-family: \'Courier New\', monospace;">$1</code>');
     
     // Links
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color: #4fc1ff; text-decoration: underline;">$1</a>');
     
     // Images
-    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0;">');
     
-    // Lists
-    html = html.replace(/^\s*\* (.+)/gm, '<li>$1</li>');
-    html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+    // Lists - Unordered (including - and *)
+    html = html.replace(/^\s*[-*] (.+)/gm, '<li style="margin: 4px 0;">$1</li>');
+    html = html.replace(/(<li.*<\/li>)/gs, '<ul style="margin: 12px 0; padding-left: 24px;">$1</ul>');
+    
+    // Lists - Ordered
+    html = html.replace(/^\s*\d+\. (.+)/gm, '<li style="margin: 4px 0;">$1</li>');
+    html = html.replace(/(<li.*<\/li>)/gs, function(match) {
+      return match.includes('</ul>') ? match : '<ol style="margin: 12px 0; padding-left: 24px;">' + match + '</ol>';
+    });
+    
+    // Blockquotes
+    html = html.replace(/^> (.+)/gm, '<blockquote style="border-left: 4px solid #007acc; margin: 16px 0; padding: 8px 16px; color: #cccccc; background: rgba(0, 122, 204, 0.1); border-radius: 0 4px 4px 0;">$1</blockquote>');
+    
+    // Horizontal rules
+    html = html.replace(/^---$/gm, '<hr style="border: none; border-top: 1px solid #3e3e42; margin: 24px 0;">');
     
     // Paragraphs
-    html = html.replace(/\n\s*\n/g, '</p><p>');
-    html = '<p>' + html + '</p>';
+    html = html.replace(/\n\s*\n/g, '</p><p style="margin: 12px 0; line-height: 1.6;">');
+    html = '<p style="margin: 12px 0; line-height: 1.6;">' + html + '</p>';
     
-    // Clean up empty paragraphs
-    html = html.replace(/<p><\/p>/g, '');
-    html = html.replace(/<p>(<h[1-6]>)/g, '$1');
+    // Clean up empty paragraphs and fix nested tags
+    html = html.replace(/<p[^>]*><\/p>/g, '');
+    html = html.replace(/<p[^>]*>(<h[1-6][^>]*>)/g, '$1');
     html = html.replace(/(<\/h[1-6]>)<\/p>/g, '$1');
-    html = html.replace(/<p>(<ul>)/g, '$1');
-    html = html.replace(/(<\/ul>)<\/p>/g, '$1');
-    html = html.replace(/<p>(<pre>)/g, '$1');
+    html = html.replace(/<p[^>]*>(<[uo]l[^>]*>)/g, '$1');
+    html = html.replace(/(<\/[uo]l>)<\/p>/g, '$1');
+    html = html.replace(/<p[^>]*>(<pre[^>]*>)/g, '$1');
     html = html.replace(/(<\/pre>)<\/p>/g, '$1');
+    html = html.replace(/<p[^>]*>(<blockquote[^>]*>)/g, '$1');
+    html = html.replace(/(<\/blockquote>)<\/p>/g, '$1');
+    html = html.replace(/<p[^>]*>(<hr[^>]*>)/g, '$1');
+    html = html.replace(/(<hr[^>]*>)<\/p>/g, '$1');
+    
+    // Clean up consecutive lists
+    html = html.replace(/<\/ul>\s*<ul[^>]*>/g, '');
+    html = html.replace(/<\/ol>\s*<ol[^>]*>/g, '');
     
     return html;
   }
@@ -1368,8 +1518,19 @@ class MdMagicEditor {
   /**
    * Update status bar
    */
-  updateStatus() {
+  updateStatus(leftText = null, rightText = null) {
     const status = document.getElementById('status');
+    
+    if (leftText && rightText) {
+      // Fallback mode - use provided text
+      status.innerHTML = `
+        <div class="status-left">${leftText}</div>
+        <div class="status-right">${rightText}</div>
+      `;
+      return;
+    }
+    
+    // Normal mode - calculate from editor state
     const content = this.editor ? this.editor.getValue() : '';
     const lines = content.split('\n').length;
     const chars = content.length;
@@ -1392,14 +1553,79 @@ class MdMagicEditor {
    * Handle messages from extension
    */
   handleMessage(message) {
+    console.log('MdMagicEditor: Received message:', message);
+    console.log('MdMagicEditor: Current editor state:', {
+      isInitialized: this.isInitialized,
+      hasEditor: !!this.editor,
+      currentContent: this.editor ? this.editor.getValue() : 'No editor'
+    });
+    
     switch (message.type) {
       case 'setContent':
+        console.log('MdMagicEditor: Processing setContent message');
+        console.log('MdMagicEditor: New content length:', message.payload?.content?.length || 0);
+        console.log('MdMagicEditor: From file:', message.payload?.fromFile || false);
+        
         if (this.editor) {
-          this.editor.setValue(message.payload.content);
-          this.documentState.content = message.payload.content;
+          const newContent = message.payload.content;
+          const fromFile = message.payload.fromFile || false;
+          
+          console.log('MdMagicEditor: Current content vs new content:', {
+            currentLength: this.editor.getValue().length,
+            newLength: newContent?.length || 0,
+            different: this.editor.getValue() !== newContent
+          });
+          
+          // Only update if content is different to avoid cursor jumps
+          if (this.editor.getValue() !== newContent) {
+            // Store cursor position
+            const position = this.editor.getPosition();
+            const scrollTop = this.editor.getScrollTop();
+            
+            // Update content
+            this.editor.setValue(newContent);
+            this.documentState.content = newContent;
+            
+            if (fromFile) {
+              // Content came from file, mark as clean
+              this.documentState.isDirty = false;
+              console.log('MdMagicEditor: Content updated from file, marking as clean');
+            } else {
+              // Content came from webview command, preserve dirty state
+              console.log('MdMagicEditor: Content set via command');
+            }
+            
+            // Try to restore cursor position (may not be exact if content length changed significantly)
+            try {
+              this.editor.setPosition(position);
+              this.editor.setScrollTop(scrollTop);
+            } catch (error) {
+              console.warn('MdMagicEditor: Could not restore cursor position:', error);
+            }
+            
+            this.updateStatus();
+            this.updatePreview();
+            
+            if (fromFile) {
+              // Show brief indication that file was updated
+              this.showFileUpdateNotification();
+            }
+          } else {
+            console.log('MdMagicEditor: Content is the same, skipping update');
+          }
+        } else {
+          console.log('MdMagicEditor: Editor not ready, storing content for later');
+          // Store content in document state for when editor becomes available
+          this.documentState.content = message.payload.content || '';
+        }
+        break;
+        
+      case 'contentChanged':
+        // Handle content change notifications from extension
+        if (message.payload.saved) {
           this.documentState.isDirty = false;
           this.updateStatus();
-          this.updatePreview();
+          console.log('MdMagicEditor: Document saved, marked as clean');
         }
         break;
         
@@ -1660,13 +1886,63 @@ class MdMagicEditor {
     console.error(message);
     // Could show a toast notification here
   }
+
+  /**
+   * Show brief notification that file was updated from disk
+   */
+  showFileUpdateNotification() {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: var(--vscode-notifications-background, #007acc);
+      color: var(--vscode-notifications-foreground, white);
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 13px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out;
+    `;
+    notification.textContent = '📄 File updated from disk';
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+      notification.style.opacity = '1';
+    }, 10);
+    
+    // Animate out and remove
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 200);
+    }, 2000);
+  }
 }
 
+// Make sure the class is globally available
+console.log('MdMagicEditor class defined:', typeof MdMagicEditor);
+window.MdMagicEditor = MdMagicEditor;
+
 // Initialize editor when DOM is ready
+console.log('MdMagicEditor: Script loaded, document.readyState:', document.readyState);
+
 if (document.readyState === 'loading') {
+  console.log('MdMagicEditor: Document still loading, waiting for DOMContentLoaded');
   document.addEventListener('DOMContentLoaded', () => {
+    console.log('MdMagicEditor: DOMContentLoaded event fired, creating editor');
+    window.mdMagicEditorInitialized = true;  // Prevent fallback
     new MdMagicEditor();
   });
 } else {
+  console.log('MdMagicEditor: Document already loaded, creating editor immediately');
+  window.mdMagicEditorInitialized = true;  // Prevent fallback
   new MdMagicEditor();
 }

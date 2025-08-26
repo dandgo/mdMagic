@@ -125,28 +125,39 @@ export class ExtensionController {
     const webviewProvider = this.getComponent('webviewProvider') as any;
 
     if (documentManager && webviewProvider) {
+      // Set extension controller reference in webview provider
+      webviewProvider.setExtensionController(this);
+      
       // Connect document changes to webview updates
       const documentChangeDisposable = documentManager.addChangeListener((event: any) => {
         this.logInfo(`Document change event: ${event.type} for ${event.document.uri.fsPath}`);
         
-        if (event.type === 'external' || event.type === 'content') {
-          // Find webview for this document and update it
+        if (event.type === 'external') {
+          // File was changed externally, update all webviews for this document
+          this.logInfo(`Updating all webviews for externally changed file: ${event.document.uri.fsPath}`);
+          webviewProvider.updateWebviewsForDocument(event.document.uri, event.document.content);
+        } else if (event.type === 'content') {
+          // Content changed (could be from webview or VS Code editor), sync if needed
+          this.logInfo(`Content changed for document: ${event.document.uri.fsPath}`);
+          
+          // Only update webviews if the change didn't originate from a webview
+          // (to avoid circular updates)
           const documentId = `doc_${Buffer.from(event.document.uri.toString()).toString('base64').replace(/[+/=]/g, '')}`;
           const panelInfo = webviewProvider.getWebviewByDocumentId(documentId);
           
-          if (panelInfo) {
-            this.logInfo(`Updating webview content for ${event.document.uri.fsPath}`);
-            
-            panelInfo.panel.webview.postMessage({
-              type: 'setContent',
-              payload: { content: event.document.content }
-            });
+          if (panelInfo && panelInfo.state.content !== event.document.content) {
+            this.logInfo(`Syncing webview content with document manager for ${event.document.uri.fsPath}`);
+            webviewProvider.updateWebviewsForDocument(event.document.uri, event.document.content);
           }
         }
       });
 
       this.disposables.push(documentChangeDisposable);
       this.context.subscriptions.push(documentChangeDisposable);
+      
+      this.logInfo('Document manager and webview provider connected successfully');
+    } else {
+      this.logWarning('Could not connect document manager and webview provider - one or both components not found');
     }
 
     this.logInfo('Component connections setup complete');

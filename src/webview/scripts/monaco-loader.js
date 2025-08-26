@@ -3,6 +3,8 @@
  * Handles Monaco Editor initialization with proper CSP compliance
  */
 
+console.log('=== Monaco Loader Script Loaded ===');
+
 class MonacoEditorLoader {
   constructor() {
     this.isLoaded = false;
@@ -27,10 +29,23 @@ class MonacoEditorLoader {
    * Initialize Monaco Editor instance
    */
   async createEditor(container, options = {}) {
+    console.log('MonacoEditorLoader: Creating editor with options:', options);
+    
     await this.load();
 
     if (!container) {
+      console.error('MonacoEditorLoader: Container element is null or undefined');
       throw new Error('Container element is required');
+    }
+
+    console.log('MonacoEditorLoader: Container found:', container.id, container.clientWidth, container.clientHeight);
+    console.log('MonacoEditorLoader: Container styles:', window.getComputedStyle(container));
+    
+    // Make sure container has proper dimensions
+    if (container.clientHeight === 0) {
+      console.warn('MonacoEditorLoader: Container height is 0, setting minimum height');
+      container.style.minHeight = '300px';
+      container.style.height = '100%';
     }
 
     const defaultOptions = {
@@ -52,7 +67,9 @@ class MonacoEditorLoader {
     };
 
     // Create the editor
+    console.log('MonacoEditorLoader: Creating editor with final options:', defaultOptions);
     this.editor = monaco.editor.create(container, defaultOptions);
+    console.log('MonacoEditorLoader: Editor created successfully:', this.editor);
 
     // Set up editor themes based on VS Code theme
     this._setupThemes();
@@ -112,7 +129,38 @@ class MonacoEditorLoader {
           setLanguageConfiguration: () => {},
           setMonarchTokensProvider: () => {},
           registerCompletionItemProvider: () => ({ dispose: () => {} }),
-          registerHoverProvider: () => ({ dispose: () => {} })
+          registerHoverProvider: () => ({ dispose: () => {} }),
+          CompletionItemKind: {
+            Text: 1,
+            Method: 2,
+            Function: 3,
+            Constructor: 4,
+            Field: 5,
+            Variable: 6,
+            Class: 7,
+            Interface: 8,
+            Module: 9,
+            Property: 10,
+            Unit: 11,
+            Value: 12,
+            Enum: 13,
+            Keyword: 14,
+            Snippet: 15,
+            Color: 16,
+            File: 17,
+            Reference: 18,
+            Folder: 19,
+            EnumMember: 20,
+            Constant: 21,
+            Struct: 22,
+            Event: 23,
+            Operator: 24,
+            TypeParameter: 25
+          },
+          CompletionItemInsertTextRule: {
+            KeepWhitespace: 1,
+            InsertAsSnippet: 4
+          }
         },
         Range: class Range {
           constructor(startLineNumber, startColumn, endLineNumber, endColumn) {
@@ -162,6 +210,7 @@ class MonacoEditorLoader {
    * Create a simplified Monaco-like editor
    */
   _createSimpleEditor(container, options = {}) {
+    console.log('MonacoEditorLoader: Creating simplified editor in container:', container);
     const textarea = document.createElement('textarea');
     textarea.className = 'monaco-editor-textarea';
     
@@ -178,8 +227,16 @@ class MonacoEditorLoader {
       color: 'var(--vscode-editor-foreground)',
       padding: '8px',
       lineHeight: '1.5',
-      tabSize: options.tabSize || 2
+      tabSize: options.tabSize || 2,
+      // Ensure visibility
+      display: 'block',
+      visibility: 'visible',
+      opacity: '1',
+      zIndex: '1',
+      minHeight: '200px'
     });
+    
+    console.log('MonacoEditorLoader: Applied styles to textarea:', textarea.style.cssText);
 
     // Set initial value
     if (options.value) {
@@ -189,6 +246,9 @@ class MonacoEditorLoader {
     // Clear container and add textarea
     container.innerHTML = '';
     container.appendChild(textarea);
+    
+    console.log('MonacoEditorLoader: Textarea created and added to container');
+    console.log('MonacoEditorLoader: Container now has', container.children.length, 'children');
 
     // Create Monaco-like API
     const editor = {
@@ -203,9 +263,11 @@ class MonacoEditorLoader {
       // Core API methods
       getValue: () => textarea.value,
       setValue: (value) => {
+        console.log('MonacoEditorLoader: setValue called with:', value);
         textarea.value = value;
         editor._model.value = value;
         editor._triggerContentChange();
+        console.log('MonacoEditorLoader: setValue completed, textarea value is now:', textarea.value);
       },
       getModel: () => editor._model,
       setModel: (model) => {
@@ -318,6 +380,56 @@ class MonacoEditorLoader {
         return { dispose: () => {} };
       },
 
+      // Additional Monaco-like methods required by editor.js
+      executeEdits: (source, edits) => {
+        if (edits && edits.length > 0) {
+          const edit = edits[0];
+          if (edit.range && edit.text !== undefined) {
+            const selection = editor.getSelection();
+            const newValue = textarea.value.substring(0, textarea.selectionStart) + 
+                            edit.text + 
+                            textarea.value.substring(textarea.selectionEnd);
+            editor.setValue(newValue);
+          }
+        }
+        return true;
+      },
+
+      trigger: (source, action, args) => {
+        // Handle common Monaco actions
+        if (action === 'undo') {
+          document.execCommand('undo');
+        } else if (action === 'redo') {
+          document.execCommand('redo');
+        } else if (action === 'actions.find') {
+          // Open browser's find dialog
+          document.execCommand('find');
+        }
+      },
+
+      getScrollTop: () => textarea.scrollTop,
+      getScrollHeight: () => textarea.scrollHeight,
+      getLayoutInfo: () => ({
+        width: container.clientWidth,
+        height: container.clientHeight
+      }),
+
+      // Model methods that might be called on the editor
+      getLineContent: (lineNumber) => {
+        const lines = textarea.value.split('\n');
+        return lines[lineNumber - 1] || '';
+      },
+
+      getValueInRange: (range) => {
+        if (!range) {
+          return textarea.value;
+        }
+        const lines = textarea.value.split('\n');
+        const startOffset = this._getOffsetFromPosition(lines, range.startLineNumber, range.startColumn);
+        const endOffset = this._getOffsetFromPosition(lines, range.endLineNumber, range.endColumn);
+        return textarea.value.substring(startOffset, endOffset);
+      },
+
       // Internal methods
       _triggerContentChange: () => {
         const event = {
@@ -339,13 +451,18 @@ class MonacoEditorLoader {
     };
 
     // Set up event listeners
+    console.log('MonacoEditorLoader: Setting up textarea event listeners');
+    
     textarea.addEventListener('input', () => {
+      console.log('MonacoEditorLoader: Input event fired, value:', textarea.value.substring(0, 50));
       editor._model.value = textarea.value;
       editor._triggerContentChange();
     });
 
-    textarea.addEventListener('selectionchange', () => {
+    // Handle cursor position changes (use multiple events since selectionchange doesn't work on textarea)
+    const handleCursorChange = () => {
       const position = editor.getPosition();
+      console.log('MonacoEditorLoader: Cursor position changed:', position);
       editor._onDidChangeCursorPosition.forEach(callback => {
         try {
           callback({ position });
@@ -353,7 +470,13 @@ class MonacoEditorLoader {
           console.error('Error in cursor position callback:', error);
         }
       });
-    });
+    };
+
+    textarea.addEventListener('click', handleCursorChange);
+    textarea.addEventListener('keyup', handleCursorChange);
+    textarea.addEventListener('focus', handleCursorChange);
+    
+    console.log('MonacoEditorLoader: All event listeners set up');
 
     return editor;
   }
@@ -369,6 +492,19 @@ class MonacoEditorLoader {
       getValue: function() { return this.value; },
       setValue: function(newValue) { this.value = newValue; },
       getLanguageId: function() { return this.language; },
+      getValueInRange: function(range) {
+        if (!range) {
+          return this.value;
+        }
+        const lines = this.value.split('\n');
+        const startOffset = this._getOffsetFromPosition(lines, range.startLineNumber, range.startColumn);
+        const endOffset = this._getOffsetFromPosition(lines, range.endLineNumber, range.endColumn);
+        return this.value.substring(startOffset, endOffset);
+      }.bind(this),
+      getLineContent: function(lineNumber) {
+        const lines = this.value.split('\n');
+        return lines[lineNumber - 1] || '';
+      },
       dispose: function() {
         const index = this._models.indexOf(this);
         if (index > -1) {
@@ -414,14 +550,35 @@ class MonacoEditorLoader {
     const alt = event.altKey;
     
     // Convert Monaco keybinding to simple format
-    if (typeof keybinding === 'number') {
-      // This is a simplified implementation
-      return false;
+    if (typeof keybinding === 'string') {
+      const parts = keybinding.toLowerCase().split('+');
+      return parts.every(part => {
+        switch(part.trim()) {
+          case 'ctrl': return ctrl;
+          case 'shift': return shift;
+          case 'alt': return alt;
+          default: return event.key.toLowerCase() === part.trim();
+        }
+      });
     }
     
     return false;
   }
+
+  /**
+   * Get offset from position in text
+   */
+  _getOffsetFromPosition(lines, lineNumber, column) {
+    let offset = 0;
+    for (let i = 0; i < lineNumber - 1 && i < lines.length; i++) {
+      offset += lines[i].length + 1; // +1 for newline
+    }
+    offset += column - 1;
+    return offset;
+  }
 }
 
-// Export the loader
+// Make sure the class is globally available and log it
+console.log('MonacoEditorLoader class defined:', typeof MonacoEditorLoader);
 window.MonacoEditorLoader = MonacoEditorLoader;
+console.log('MonacoEditorLoader attached to window:', typeof window.MonacoEditorLoader);
