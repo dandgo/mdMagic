@@ -5,35 +5,9 @@
 
 import * as vscode from 'vscode';
 import { Component } from '../controllers/ExtensionController';
-import { EditorMode } from './MarkdownDocument';
+import { EditorMode, ModeChangeEvent, ModeChangeListener, DocumentModeState, IModeManager } from '../types';
 import { IDocumentManager } from './DocumentManager';
 import { IConfigManager } from './ConfigManager';
-
-export interface ModeChangeEvent {
-  documentId: string;
-  previousMode: EditorMode;
-  currentMode: EditorMode;
-  timestamp: Date;
-}
-
-export type ModeChangeListener = (event: ModeChangeEvent) => void;
-
-export interface DocumentModeState {
-  documentId: string;
-  mode: EditorMode;
-  cursorPosition?: { line: number; character: number };
-  scrollPosition?: number;
-  lastSwitched: Date;
-}
-
-export interface IModeManager extends Component {
-  getCurrentMode(documentId: string): EditorMode;
-  switchMode(documentId: string, targetMode: EditorMode): Promise<void>;
-  registerModeChangeListener(listener: ModeChangeListener): vscode.Disposable;
-  canSwitchMode(documentId: string, targetMode: EditorMode): boolean;
-  getDocumentModeState(documentId: string): DocumentModeState | undefined;
-  setDefaultMode(documentId: string): Promise<void>;
-}
 
 export class ModeManager implements IModeManager {
   public readonly id = 'mode-manager';
@@ -190,6 +164,16 @@ export class ModeManager implements IModeManager {
         this.modeChangeListeners.splice(index, 1);
       }
     });
+  }
+
+  /**
+   * Remove a mode change listener
+   */
+  public removeModeChangeListener(listener: ModeChangeListener): void {
+    const index = this.modeChangeListeners.indexOf(listener);
+    if (index !== -1) {
+      this.modeChangeListeners.splice(index, 1);
+    }
   }
 
   /**

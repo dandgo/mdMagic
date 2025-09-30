@@ -6,8 +6,9 @@
 import * as vscode from 'vscode';
 import { Component } from '../controllers/ExtensionController';
 import { IDocumentManager } from './DocumentManager';
-import { IModeManager } from './ModeManager';
-import { IMarkdownDocument, EditorMode } from './MarkdownDocument';
+import { IModeManager } from '../types';
+import { IMarkdownDocument } from './MarkdownDocument';
+import { EditorMode } from '../types';
 
 export interface DocumentStats {
   words: number;
