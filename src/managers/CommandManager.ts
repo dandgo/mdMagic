@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 import { Component } from '../controllers/ExtensionController';
-import { EditorMode } from '../managers/MarkdownDocument';
+import { EditorMode } from '../types';
 
 // Command interfaces
 export interface CommandHandler {

@@ -4,22 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-
-export interface Position {
-  line: number;
-  character: number;
-}
-
-export interface Range {
-  start: Position;
-  end: Position;
-}
-
-export enum EditorMode {
-  Editor = 'editor',
-  Viewer = 'viewer',
-  Split = 'split',
-}
+import { Position, Range, EditorMode } from '../types';
 
 export interface MarkdownDocumentState {
   id: string;

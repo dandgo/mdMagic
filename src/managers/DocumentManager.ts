@@ -5,7 +5,8 @@
 
 import * as vscode from 'vscode';
 import { Component } from '../controllers/ExtensionController';
-import { MarkdownDocument, IMarkdownDocument, EditorMode } from './MarkdownDocument';
+import { MarkdownDocument, IMarkdownDocument } from './MarkdownDocument';
+import { EditorMode } from '../types';
 
 export interface DocumentChangeEvent {
   document: IMarkdownDocument;

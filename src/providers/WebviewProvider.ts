@@ -8,13 +8,13 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { Component } from '../controllers/ExtensionController';
 import {
-  EditorMode,
   MessageType,
   WebviewMessage,
   WebviewState,
   WebviewPanelInfo,
   WebviewOptions,
 } from '../types/webview';
+import { EditorMode } from '../types';
 
 export class WebviewProvider implements Component {
   public readonly id = 'webviewProvider';

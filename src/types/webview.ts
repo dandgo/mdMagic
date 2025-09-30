@@ -3,9 +3,7 @@
  */
 
 import * as vscode from 'vscode';
-import { EditorMode } from '../managers/MarkdownDocument';
-
-export { EditorMode };
+import { EditorMode } from './document';
 
 export enum MessageType {
   CONTENT_CHANGED = 'contentChanged',
